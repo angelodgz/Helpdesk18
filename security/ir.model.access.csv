@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_create,perm_read,perm_write,perm_unlink
+access_helpdesk_ticket_user,helpdesk.ticket user,model_helpdesk_ticket,base.group_user,1,1,1,1
+access_helpdesk_ticket_stage_user,helpdesk.ticket.stage user,model_helpdesk_ticket_stage,base.group_user,1,1,1,1
+access_helpdesk_tag_user,helpdesk.tag user,model_helpdesk_tag,base.group_user,1,1,1,1

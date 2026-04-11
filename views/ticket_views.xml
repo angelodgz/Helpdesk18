@@ -1,15 +1,15 @@
 <odoo>
-    <!-- Ticket Tree View -->
-    <record id="view_helpdesk_ticket_tree" model="ir.ui.view">
-        <field name="name">helpdesk.ticket.tree</field>
+    <!-- Ticket List View -->
+    <record id="view_helpdesk_ticket_list" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.list</field>
         <field name="model">helpdesk.ticket</field>
         <field name="arch" type="xml">
-            <tree>
+            <list>
                 <field name="name" />
                 <field name="employee_id" />
                 <field name="state" />
                 <field name="priority" />
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -20,6 +20,7 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
+                 
                     <group>
                         <field name="name" />
                         <field name="employee_id" />
@@ -46,5 +47,7 @@
                 </div>
             </form>
         </field>
+
     </record>
+   
 </odoo>

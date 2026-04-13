@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import models, fields, api # pyright: ignore[reportMissingImports]
 
 class HelpdeskTicket(models.Model):
     _name = 'helpdesk.ticket'

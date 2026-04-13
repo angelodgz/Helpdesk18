@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import models, fields # pyright: ignore[reportMissingImports]
 
 class HelpdeskTicketStage(models.Model):
     _name = 'helpdesk.ticket.stage'

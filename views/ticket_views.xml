@@ -3,14 +3,16 @@
         <field name="name">helpdesk.ticket.list</field>
         <field name="model">helpdesk.ticket</field>
         <field name="arch" type="xml">
-            <list>
+            <list decoration-danger="priority=='3'"
+                  decoration-warning="priority=='2'"
+                  decoration-success="state=='approved'">
                 <field name="name"/>
                 <field name="employee_id"/>
                 <field name="category"/>
                 <field name="priority"/>
-                <field name="stage_id"/>        <!-- kulang -->
-                <field name="assigned_to"/>     <!-- kulang -->
-                <field name="date_requested"/>  <!-- kulang -->
+                <field name="stage_id"/>        
+                <field name="assigned_to"/>     
+                <field name="date_requested"/>  
                 <field name="state"/> 
             </list>
         </field>
@@ -130,6 +132,16 @@
             <chatter/>
 
         </form>
+    </field>
+</record>
+<record id="view_helpdesk_ticket_calendar" model="ir.ui.view">
+    <field name="name">helpdesk.ticket.calendar</field>
+    <field name="model">helpdesk.ticket</field>
+    <field name="arch" type="xml">
+        <calendar date_start="date_requested" color="priority" mode="month">
+            <field name="name"/>
+            <field name="employee_id"/>
+        </calendar>
     </field>
 </record>
 </odoo>

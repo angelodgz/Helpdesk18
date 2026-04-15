@@ -18,15 +18,25 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
+                        <!-- Done ribbon -->
+             <widget name="web_ribbon" title="Done Stage" 
+                bg_color="bg-success"
+                invisible="not is_done_stage"/>
+                       <!-- Cancelled ribbon -->
+             <widget name="web_ribbon" title="Cancelled Stage" 
+                bg_color="bg-danger"
+                invisible="not is_cancelled_stage"/>
+
                     <group>
                         <field name="name" />
                         <field name="sequence" />
                         <field name="is_done_stage" />
                         <field name="is_cancelled_stage" />
-                    </group>
-                    <group>
+                        <field name="fold" />    
                         <field name="description" />
+                            <!-- kulang -->       
                     </group>
+
                 </sheet>
             </form>
         </field>
@@ -38,6 +48,4 @@
         <field name="res_model">helpdesk.ticket.stage</field>
         <field name="view_mode">list,form</field>
     </record>
-
-
 </odoo>

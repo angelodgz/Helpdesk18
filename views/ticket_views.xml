@@ -6,7 +6,7 @@
             <list decoration-danger="priority=='3'"
                   decoration-warning="priority=='2'"
                   decoration-success="state=='approved'">
-                <field name="name"/>
+                <field name="name" />
                 <field name="employee_id"/>
                 <field name="category"/>
                 <field name="priority"/>
@@ -49,11 +49,11 @@
                 <!-- MAIN FIELDS -->
                 <group>
                     <group>
-                        <field name="name"/>
+                        <field name="name" readonly="1"/>
                         <field name="employee_id"/>
                         <field name="category"/>
                         <field name="priority" widget="priority"/>
-                        <field name="tag_ids" widget="many2many_tags"/>
+                        <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color', 'no_create_edit': True}"/>
                     </group>
                     <group>
                         <field name="stage_id"/>
@@ -72,7 +72,7 @@
                 <!-- DYNAMIC FIELDS PER CATEGORY -->
 
                 <!-- IT Support -->
-                <group string="IT Support Details" invisible="category != 'it'">
+                <group string="IT Support Details" invisible="category != 'it'"> 
                     <group>
                         <field name="issue_type"/>
                         <field name="urgency"/>
@@ -101,7 +101,7 @@
                         <field name="facility_type"/>
                     </group>
                     <group>
-                        <field name="estimated_cost"/>
+                        <field name="estimated_cost" widget="numeric_tolerance" />
                     </group>
                 </group>
 

@@ -1,5 +1,5 @@
 from odoo import models, fields, api # pyright: ignore[reportMissingImports]
-
+from odoo.exceptions import ValidationError
 class HelpdeskTicket(models.Model):
     _name = 'helpdesk.ticket'
     _description = 'Helpdesk Ticket'
@@ -59,12 +59,14 @@ class HelpdeskTicket(models.Model):
     hr_notes = fields.Text()
 
     # Facilities Fields
+
     location = fields.Char()
     facility_type = fields.Selection([
         ('repair', 'Repair'),
         ('maintenance', 'Maintenance')
     ])
     estimated_cost = fields.Float()
+    
 
     # Finance Fields
     amount = fields.Float()
@@ -105,4 +107,17 @@ class HelpdeskTicket(models.Model):
         self.write({'state': 'draft'})
         self.message_post(body="Ticket has been reopened.")
 
+ # ===== MGA METHOD NASA IBABA =====
+@api.model_create_multi
+def create(self, vals_list):
+    print("===== CREATE METHOD CALLED =====") # This will show now
+    for vals in vals_list:
+        if vals.get('name', 'New') == 'New':
+            # Ensure the code matches what's in your sequence.xml
+            vals['name'] = self.env['ir.sequence'].next_by_code('helpdesk.ticket') or 'New'
         
+        # Set date if not already provided
+        if not vals.get('date_requested'):
+            vals['date_requested'] = fields.Datetime.now()
+            
+    return super(HelpdeskTicket, self).create(vals_list)

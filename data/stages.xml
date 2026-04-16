@@ -3,6 +3,11 @@
         <record id="helpdesk_stage_new" model="helpdesk.ticket.stage">
             <field name="name">New</field>
             <field name="sequence">1</field>
+            <field name="is_done_stage">false</field>
+            <field name="is_cancelled_stage">false</field>
+            <field name="fold">false</field>
+            <field name="description">This stage is assigned to tickets that is freshly created</field>
+
         </record>
         <record id="helpdesk_stage_progress" model="helpdesk.ticket.stage">
             <field name="name">In Progress</field>

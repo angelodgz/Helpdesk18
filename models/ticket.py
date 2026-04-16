@@ -6,7 +6,7 @@ class HelpdeskTicket(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _rec_name = 'name'
 
-    name = fields.Char(string="Ticket Reference", readonly=True, default='New', copy=False)
+    name = fields.Char(string="Name", readonly=True, default='New', copy=False)
     employee_id = fields.Many2one('hr.employee', required=True)
     category = fields.Selection([
         ('it', 'IT Support'),

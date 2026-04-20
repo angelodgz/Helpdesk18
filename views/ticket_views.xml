@@ -225,6 +225,7 @@
             <field name="is_cancelled_stage"/>
             <field name="employee_id"/>
             <field name="category"/>
+            
 
             <templates>
                 <t t-name="kanban-box">
@@ -232,12 +233,12 @@
                         <div class="oe_kanban_content">
                             <div class="o_kanban_record_top">
                                 <strong class="o_kanban_record_title"><field name="name"/></strong>
-                                
                                 <span t-if="record.is_done_stage.raw_value" class="badge rounded-pill text-bg-success float-end">Done</span>
                                 <span t-if="record.is_cancelled_stage.raw_value" class="badge rounded-pill text-bg-danger float-end">Cancelled</span>
                             </div>
                             <div><field name="employee_id"/></div>
                             <div><field name="category"/></div>
+                            <field name="priority" widget="priority"/>
                         </div> 
                     </div> 
                 </t>

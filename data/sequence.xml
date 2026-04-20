@@ -1,12 +1,13 @@
+
 <odoo>
+ <!-- Helpdesk Ticket Sequence - linked to ticket.py for auto-naming -->
     <data noupdate="1">
         <record id="seq_helpdesk_ticket" model="ir.sequence">
-            <field name="name">Helpdesk Ticket</field>
+            <field name="name">Helpdesk Ticket Sequence</field>
             <field name="code">helpdesk.ticket</field>
-            <field name="prefix">HD/%(fy)s/</field>
-            <field name="number_next">1</field>
-            <field name="number_increment">1</field>
-            <field name="padding">5</field>
+            <field name="prefix">TKT-</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
         </record>
     </data>
 </odoo>

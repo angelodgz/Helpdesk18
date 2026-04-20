@@ -10,6 +10,7 @@
         'security/ir.model.access.csv',   # SUNOD ANG PERMISSIONS
         'data/sequence.xml',
         'data/stages.xml',
+        'wizard/refuse_wizard_views.xml',
         'views/ticket_views.xml',         # LOAD VIEWS BAGO MENU
         'views/stage_views.xml',
         'views/employee_inherit.xml',

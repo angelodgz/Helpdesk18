@@ -9,7 +9,7 @@
                     <field name="refused_reason" placeholder="Enter reason for refusal..."/>
                 </group>
                 <footer>
-                    <button name="action_confirm" string="Confirm" type="object" class="oe_highlight"/>
+                    <button name="action_confirm_refusal" string="Confirm" type="object" class="oe_highlight"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

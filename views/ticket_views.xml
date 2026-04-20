@@ -106,16 +106,22 @@
 
             <!-- STATUS BAR -->
             <header>
-                <button name="action_mark_done" string="Mark as Done" type="object" class="oe_highlight" invisible="state != 'draft' or id == False"/>
-                <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
-                <!-- ACTION BUTTONS -->
-                <!-- Pop up Wizzards for Approve and Refuse-->
-                <button name="action_approve" string="Approve" type="object" class="oe_highlight" groups="helpdesk_ticket.group_helpdesk_manager" />
-                <button name="action_refuse" string="Refuse" type="object" class="btn-danger" groups="helpdesk_ticket.group_helpdesk_manager"/>
-                <button name="action_reopen" string="Reopen" type="object"
-                        invisible="state != 'refused'"/>
-                <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
-            </header>
+    <button name="action_mark_done" string="Mark as Done" type="object" class="oe_highlight" 
+            invisible="state != 'draft'"/>
+    
+    <button name="action_approve" string="Approve" type="object" class="oe_highlight" 
+            groups="helpdesk_ticket.group_helpdesk_manager" 
+            invisible="state != 'in_review'"/>
+    
+    <button name="action_refuse" string="Refuse" type="object" class="btn-danger" 
+            groups="helpdesk_ticket.group_helpdesk_manager" 
+            invisible="state != 'in_review'"/>
+    
+    <button name="action_reopen" string="Reopen" type="object"
+            invisible="state != 'refused'"/>
+
+    <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
+</header>
 
             <sheet>
                 <!-- MAIN FIELDS -->

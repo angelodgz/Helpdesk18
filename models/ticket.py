@@ -107,15 +107,19 @@ class HelpdeskTicket(models.Model):
         # This triggers the approval process: state becomes in_review
         self.ensure_one()
         stage = self._get_stage_by_name('For Approval Done')
-        values = {'stage_id': stage.id} if stage else {}
+        
+        # BINAGO/DINAGDAG: Isinama ang 'state': 'in_review' sa dictionary 
+        # para sigurado ang transition ng buttons sa XML.
+        values = {'stage_id': stage.id, 'state': 'in_review'} if stage else {'state': 'in_review'}
+        
         self.write(values)
         # The write() method will automatically set state to 'in_review' via trigger
         self.message_post(body="Ticket marked as done and sent for approval.")
         # ANG FIX: Para mag-reload ang page at manatili sa Form view
         return {
-        'type': 'ir.actions.client',
-        'tag': 'reload',
-         }
+            'type': 'ir.actions.client',
+            'tag': 'reload',
+        }
     def action_approve(self):
         # Approve the ticket and record the approver
         # According to refined spec: state=approved, approved_by=current user, date_closed=today

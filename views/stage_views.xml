@@ -18,23 +18,24 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
-                        <!-- Done ribbon -->
-             <widget name="web_ribbon" title="Done Stage" 
-                bg_color="bg-success"
-                invisible="not is_done_stage"/>
-                       <!-- Cancelled ribbon -->
-             <widget name="web_ribbon" title="Cancelled Stage" 
-                bg_color="bg-danger"
-                invisible="not is_cancelled_stage"/>
+                    <!-- Done ribbon -->
+                    <widget name="web_ribbon" title="Done Stage"
+                        bg_color="text-bg-success"
+                        invisible="not is_done_stage" />
+
+                    <!-- Cancelled ribbon -->
+                    <widget name="web_ribbon" title="Cancelled Stage"
+                        bg_color="text-bg-danger"
+                        invisible="not is_cancelled_stage" />
 
                     <group>
                         <field name="name" />
                         <field name="sequence" />
                         <field name="is_done_stage" />
                         <field name="is_cancelled_stage" />
-                        <field name="fold" />    
+                        <field name="fold" />
                         <field name="description" />
-                            <!-- kulang -->       
+                        <!-- kulang -->
                     </group>
 
                 </sheet>
@@ -42,7 +43,7 @@
         </field>
     </record>
 
- <!-- Action -->
+    <!-- Action -->
     <record id="action_helpdesk_stage" model="ir.actions.act_window">
         <field name="name">Stages</field>
         <field name="res_model">helpdesk.ticket.stage</field>

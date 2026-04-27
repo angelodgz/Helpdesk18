@@ -150,6 +150,10 @@
                 <sheet>
 
                     <!-- MAIN FIELDS -->
+                    <widget name="web_ribbon"
+                        title="Waiting Approval"
+                        bg_color="text-bg-warning"
+                        invisible="state != 'in_review'" />
                     <widget name="web_ribbon" title="Done" bg_color="text-bg-success"
                         invisible="not is_done_stage" />
                     <widget name="web_ribbon" title="Cancelled" bg_color="text-bg-danger"
@@ -250,7 +254,6 @@
     <record id="helpdesk_ticket_view_kanban" model="ir.ui.view">
         <field name="name">helpdesk.ticket.kanban</field>
         <field name="model">helpdesk.ticket</field>
-        <!-- TANGGALIN: priority at groups_id -->
         <field name="arch" type="xml">
             <kanban default_group_by="stage_id"
                 quick_create="true"
@@ -263,7 +266,7 @@
                 <field name="is_cancelled_stage" />
                 <field name="employee_id" />
                 <field name="category" />
-
+                <field name="state" />
                 <templates>
                     <t t-name="kanban-box">
                         <div
@@ -278,8 +281,14 @@
                                     <span t-if="record.is_cancelled_stage.raw_value"
                                         class="badge rounded-pill text-bg-danger float-end">
                                         Cancelled</span>
+                                    <span
+                                        t-if="record.state.raw_value == 'in_review' and record.is_done_stage.raw_value == False and record.is_cancelled_stage.raw_value == False"
+                                        class="badge rounded-pill text-bg-warning float-end">
+                                        Waiting Approval</span>
                                 </div>
-                                <field name="priority" widget="priority" />
+                                <div>
+                                    <field name="priority" widget="priority" />
+                                </div>
                                 <div>
                                     <field name="employee_id" />
                                 </div>
@@ -302,6 +311,17 @@
                 <field name="category" type="row" />
                 <field name="stage_id" type="col" />
             </graph>
+        </field>
+    </record>
+    <!-- Pivot View -->
+    <record id="view_helpdesk_ticket_pivot" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.pivot</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="arch" type="xml">
+            <pivot string="Ticket Analysis" disable_linking="0">
+                <field name="category" type="row" />
+                <field name="stage_id" type="col" />
+            </pivot>
         </field>
     </record>
 </odoo>

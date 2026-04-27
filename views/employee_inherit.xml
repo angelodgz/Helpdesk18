@@ -1,14 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Inherit hr.employee form to add ticket-related fields -->
-    <record id="view_employee_form_helpdesk" model="ir.ui.view">
-        <field name="name">hr.employee.form.helpdesk</field>
+    <record id="view_employee_helpdesk_inherit" model="ir.ui.view">
+        <field name="name">hr.employee.helpdesk.inherit</field>
         <field name="model">hr.employee</field>
-        <field name="inherit_id" ref="hr.view_employee_form" />
+        <field name="inherit_id" ref="hr.view_employee_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//page[@name='personal_information']" position="after">
-                <page string="Helpdesk">
-                    <p class="oe_grey">Employee helpdesk ticket information</p>
-                </page>
+            <xpath expr="//div[@name='button_box']" position="inside">
+
+                <!-- Smart Button 1: Tickets submitted by employee -->
+                <button name="action_view_helpdesk_tickets"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-ticket">
+                    <field name="helpdesk_ticket_count" 
+                           widget="statinfo" 
+                           string="Tickets"/>
+                </button>
+
+                <!-- BONUS Smart Button 2: Tickets assigned to employee -->
+                <button name="action_view_assigned_helpdesk_tickets"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-tasks">
+                    <field name="helpdesk_assigned_ticket_count" 
+                           widget="statinfo" 
+                           string="Assigned"/>
+                </button>
+
             </xpath>
         </field>
     </record>

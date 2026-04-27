@@ -106,7 +106,7 @@ class HelpdeskTicket(models.Model):
         # Send the ticket for approval by moving it to the For Approval Done stage
         # This triggers the approval process: state becomes in_review
         self.ensure_one()
-        stage = self._get_stage_by_name('For Approval Done')
+        stage = self._get_stage_by_name('For Approval')
         
         # Explicitly set state to 'in_review' to sync with UI buttons 
         values = {'stage_id': stage.id, 'state': 'in_review'} if stage else {'state': 'in_review'}
@@ -203,13 +203,14 @@ class HelpdeskTicket(models.Model):
                     vals['state'] = 'in_review'
                 elif vals.get('state') not in ('approved', 'refused'):
                     vals['state'] = 'in_review'
-            
+                    
+            # CHANGES hindi nire-reset pag For Approval stage
             elif not stage.is_cancelled_stage:
              import logging
             _logger = logging.getLogger(__name__)
             _logger.info("STAGE NAME: %s, is_done: %s, is_cancelled: %s", 
                  stage.name, stage.is_done_stage, stage.is_cancelled_stage)
-            if all(r.state not in ('approved', 'refused') for r in self):
+            if all(r.state not in ('approved', 'refused', 'in_review') for r in self):
              vals['state'] = 'draft'
             _logger.info("RESETTING STATE TO DRAFT")
         

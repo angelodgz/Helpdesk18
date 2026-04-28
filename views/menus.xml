@@ -1,40 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- DITO AKO NAG ACTIVATE NG MGA VIEW MODES KANBAN,LIST,FORM ETC -->
+
+    <!-- ── Window Actions ─────────────────────────────────────────────── -->
+
+    <!-- Main ticket action — all 7 views activated, Kanban is default -->
     <record id="action_helpdesk_ticket" model="ir.actions.act_window">
         <field name="name">Tickets</field>
         <field name="res_model">helpdesk.ticket</field>
+        <!-- Kanban first = default view when clicking the menu item -->
         <field name="view_mode">kanban,list,form,pivot,graph,calendar,activity</field>
-        <!-- tapos nag activate dito ng search filter -->
-        <field name="context">{'search_default_my_tickets': 0}</field>
+        <field name="context">{}</field>
+        <field name="search_view_id" ref="view_helpdesk_ticket_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Create your first ticket!
+                No tickets yet! Create your first one.
             </p>
         </field>
     </record>
 
+    <!-- Stage management action (Manager only) -->
     <record id="action_helpdesk_stage" model="ir.actions.act_window">
         <field name="name">Stages</field>
         <field name="res_model">helpdesk.ticket.stage</field>
         <field name="view_mode">list,form</field>
     </record>
 
+    <!-- Tag management action (Manager only) -->
+    <record id="action_helpdesk_tag" model="ir.actions.act_window">
+        <field name="name">Tags</field>
+        <field name="res_model">helpdesk.tag</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- ── Menus ──────────────────────────────────────────────────────── -->
+
     <menuitem id="menu_helpdesk_root"
               name="Helpdesk"
-              sequence="10"/>
+              sequence="10"
+              groups="helpdesk_ticket.group_helpdesk_user"/>
 
+    <!-- Main: Tickets → opens Kanban by default -->
     <menuitem id="menu_helpdesk_tickets"
               name="Tickets"
               parent="menu_helpdesk_root"
               action="action_helpdesk_ticket"
               sequence="1"/>
 
+    <!-- Configuration submenu (Manager only) -->
+    <menuitem id="menu_helpdesk_config"
+              name="Configuration"
+              parent="menu_helpdesk_root"
+              groups="helpdesk_ticket.group_helpdesk_manager"
+              sequence="10"/>
+
     <menuitem id="menu_helpdesk_stage"
               name="Stages"
-              parent="menu_helpdesk_root"
+              parent="menu_helpdesk_config"
               action="action_helpdesk_stage"
-              sequence="2"/>
+              sequence="1"
+              groups="helpdesk_ticket.group_helpdesk_manager"/>
+
+    <menuitem id="menu_helpdesk_tag"
+              name="Tags"
+              parent="menu_helpdesk_config"
+              action="action_helpdesk_tag"
+              sequence="2"
+              groups="helpdesk_ticket.group_helpdesk_manager"/>
 
 </odoo>
-

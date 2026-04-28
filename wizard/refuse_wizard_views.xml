@@ -4,22 +4,24 @@
         <field name="name">helpdesk.refuse.wizard.form</field>
         <field name="model">helpdesk.refuse.wizard</field>
         <field name="arch" type="xml">
-            <form string="Refuse Reason">
+            <form string="Refuse Ticket">
                 <group>
-                    <field name="refused_reason" placeholder="Enter reason for refusal..."/>
+                    <field name="ticket_id" readonly="1"/>
+                    <field name="refused_reason"
+                           placeholder="Enter a clear reason for refusing this ticket…"
+                           nolabel="1"
+                           rows="4"/>
                 </group>
                 <footer>
-                    <button name="action_confirm_refusal" string="Confirm" type="object" class="oe_highlight"/>
-                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    <button name="action_confirm_refusal"
+                            string="Confirm Refusal"
+                            type="object"
+                            class="btn-danger"/>
+                    <button string="Cancel"
+                            class="btn-secondary"
+                            special="cancel"/>
                 </footer>
             </form>
         </field>
-    </record>
-
-    <record id="action_helpdesk_refuse_wizard" model="ir.actions.act_window">
-        <field name="name">Refuse Ticket</field>
-        <field name="res_model">helpdesk.refuse.wizard</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
     </record>
 </odoo>

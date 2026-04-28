@@ -1,327 +1,404 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Search View -->
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SEARCH VIEW
+    ════════════════════════════════════════════════════════════════════════ -->
     <record id="view_helpdesk_ticket_search" model="ir.ui.view">
         <field name="name">helpdesk.ticket.search</field>
         <field name="model">helpdesk.ticket</field>
         <field name="arch" type="xml">
             <search string="Search Tickets">
 
-                <!-- Search Fields -->
-                <field name="name" string="Ticket" />
-                <field name="employee_id" string="Employee" />
-                <field name="assigned_to" string="Assigned To" />
-                <field name="category" string="Category" />
+                <!-- Searchable fields -->
+                <field name="name"        string="Ticket Ref"/>
+                <field name="employee_id" string="Employee"/>
+                <field name="assigned_to" string="Assigned To"/>
+                <field name="category"    string="Category"/>
+                <field name="tag_ids"     string="Tags"/>
 
-                <!-- FILTERS -->
-                <filter
-                    name="my_tickets"
-                    string="My Tickets"
-                    domain="[('employee_id.user_id', '=', uid)]" />
+                <!-- ── Filters ──────────────────────────────────────── -->
+                <filter name="my_tickets"
+                        string="My Tickets"
+                        domain="[('employee_id.user_id', '=', uid)]"/>
 
-                <filter
-                    name="waiting_approval"
-                    string="Waiting Approval"
-                    domain="[('state', '=', 'in_review')]" />
+                <filter name="waiting_approval"
+                        string="Waiting Approval"
+                        domain="[('state', '=', 'in_review')]"/>
 
-                <filter
-                    name="high_priority"
-                    string="High Priority"
-                    domain="[('priority', 'in', ['2', '3'])]" />
+                <filter name="high_priority"
+                        string="High Priority"
+                        domain="[('priority', 'in', ['2', '3'])]"/>
 
-                <filter
-                    name="overdue"
-                    string="Overdue"
-                    domain="[('date_closed', '=', False), ('date_requested', '&lt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S'))]" />
+                <filter name="overdue"
+                        string="Overdue (7+ days open)"
+                        domain="[
+                            ('date_closed', '=', False),
+                            ('is_cancelled_stage', '=', False),
+                            ('date_requested', '&lt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S'))
+                        ]"/>
 
-                <filter
-                    name="done"
-                    string="Done"
-                    domain="[('stage_id.is_done_stage', '=', True)]" />
+                <filter name="done"
+                        string="Done"
+                        domain="[('stage_id.is_done_stage', '=', True)]"/>
 
-                <filter
-                    name="cancelled"
-                    string="Cancelled"
-                    domain="[('stage_id.is_cancelled_stage', '=', True)]" />
+                <filter name="cancelled"
+                        string="Cancelled"
+                        domain="[('stage_id.is_cancelled_stage', '=', True)]"/>
 
-                <separator />
+                <separator/>
 
-                <!-- GROUP BY -->
+                <!-- ── Group By ─────────────────────────────────────── -->
                 <group expand="0" string="Group By">
-                    <filter
-                        name="group_category"
-                        string="Category"
-                        context="{'group_by': 'category'}" />
-                    <filter
-                        name="group_priority"
-                        string="Priority"
-                        context="{'group_by': 'priority'}" />
-                    <filter
-                        name="group_stage"
-                        string="Stage"
-                        context="{'group_by': 'stage_id'}" />
-                    <filter
-                        name="group_assigned"
-                        string="Assigned To"
-                        context="{'group_by': 'assigned_to'}" />
-                    <filter
-                        name="group_date_week"
-                        string="Date Requested (Week)"
-                        context="{'group_by': 'date_requested:week'}" />
-                    <filter
-                        name="group_date_month"
-                        string="Date Requested (Month)"
-                        context="{'group_by': 'date_requested:month'}" />
+                    <filter name="group_category"
+                            string="Category"
+                            context="{'group_by': 'category'}"/>
+                    <filter name="group_priority"
+                            string="Priority"
+                            context="{'group_by': 'priority'}"/>
+                    <filter name="group_stage"
+                            string="Stage"
+                            context="{'group_by': 'stage_id'}"/>
+                    <filter name="group_assigned"
+                            string="Assigned To"
+                            context="{'group_by': 'assigned_to'}"/>
+                    <filter name="group_date_week"
+                            string="Date Requested (Week)"
+                            context="{'group_by': 'date_requested:week'}"/>
+                    <filter name="group_date_month"
+                            string="Date Requested (Month)"
+                            context="{'group_by': 'date_requested:month'}"/>
                 </group>
 
             </search>
         </field>
     </record>
 
-    <!-- List View -->
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         LIST VIEW
+    ════════════════════════════════════════════════════════════════════════ -->
     <record id="view_helpdesk_ticket_list" model="ir.ui.view">
         <field name="name">helpdesk.ticket.list</field>
         <field name="model">helpdesk.ticket</field>
         <field name="arch" type="xml">
-            <list decoration-danger="priority=='3'"
-                decoration-warning="priority=='2'"
-                decoration-success="state=='approved'">
-                <field name="name" />
-                <field name="employee_id" />
-                <field name="category" />
-                <field name="priority" />
-                <field name="stage_id" />
-                <field name="assigned_to" />
-                <field name="date_requested" />
-                <field name="state" />
+            <!-- decoration-danger = Critical, decoration-warning = High, decoration-success = Approved -->
+            <list string="All Tickets"
+                  decoration-danger="priority == '3'"
+                  decoration-warning="priority == '2'"
+                  decoration-success="state == 'approved'">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="category"/>
+                <field name="priority"/>
+                <field name="stage_id"/>
+                <field name="assigned_to"/>
+                <field name="date_requested"/>
+                <field name="state" string="Approval State"/>
             </list>
         </field>
     </record>
 
-    <!-- Form View -->
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         FORM VIEW
+    ════════════════════════════════════════════════════════════════════════ -->
     <record id="view_helpdesk_ticket_form" model="ir.ui.view">
         <field name="name">helpdesk.ticket.form</field>
         <field name="model">helpdesk.ticket</field>
         <field name="arch" type="xml">
-            <form>
+            <form string="Helpdesk Ticket">
 
-                <!-- STATUS BAR  invisible="state not in ['draft', 'in_review']" -->
+                <!-- ── Header / Status Bar ──────────────────────────── -->
                 <header>
+
+                    <!-- Submit for Approval — visible to User/Agent while still in draft -->
                     <button name="action_mark_done"
-                        string="Mark as Done"
-                        type="object"
-                        class="oe_highlight"
-                        invisible="state != 'draft'" />
+                            string="Submit for Approval"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
 
+                    <!-- Cancel — visible to submitter while in draft -->
+                    <button name="action_cancel"
+                            string="Cancel Ticket"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state not in ('draft', 'in_review')"
+                            groups="helpdesk_ticket.group_helpdesk_user"/>
+
+                    <!-- Approve — Manager only, visible while waiting approval -->
                     <button name="action_approve"
-                        string="Approve"
-                        type="object"
-                        class="oe_highlight"
-                        groups="helpdesk_ticket.group_helpdesk_manager"
-                        invisible="state != 'in_review'" />
+                            string="Approve"
+                            type="object"
+                            class="btn-success"
+                            groups="helpdesk_ticket.group_helpdesk_manager"
+                            invisible="state != 'in_review'"/>
 
+                    <!-- Refuse — Manager only, visible while waiting approval -->
                     <button name="action_refuse"
-                        string="Refuse"
-                        type="object"
-                        class="btn-danger"
-                        groups="helpdesk_ticket.group_helpdesk_manager"
-                        invisible="state != 'in_review'" />
+                            string="Refuse"
+                            type="object"
+                            class="btn-danger"
+                            groups="helpdesk_ticket.group_helpdesk_manager"
+                            invisible="state != 'in_review'"/>
 
+                    <!-- Reopen — visible to anyone on refused tickets -->
                     <button name="action_reopen"
-                        string="Reopen"
-                        type="object"
-                        invisible="state != 'refused'" />
+                            string="Reopen"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state != 'refused'"/>
 
-                    <!-- Para sa Manager at Agent — clickable -->
+                    <!-- Stage status bar: clickable for Agent/Manager -->
                     <field name="stage_id"
-                        widget="statusbar"
-                        options="{'clickable': '1'}"
-                        groups="helpdesk_ticket.group_helpdesk_agent,helpdesk_ticket.group_helpdesk_manager" />
+                           widget="statusbar"
+                           options="{'clickable': '1'}"
+                           groups="helpdesk_ticket.group_helpdesk_agent,helpdesk_ticket.group_helpdesk_manager"/>
 
-                    <!-- Para sa User — hindi clickable -->
+                    <!-- Stage status bar: read-only for plain Users -->
                     <field name="stage_id"
-                        widget="statusbar"
-                        options="{'clickable': '0'}"
-                        groups="helpdesk_ticket.group_helpdesk_user" />
-                    <field name="state" widget="statusbar"
-                        statusbar_visible="draft,in_review,approved,refused 
-                           " />
+                           widget="statusbar"
+                           options="{'clickable': '0'}"
+                           groups="helpdesk_ticket.group_helpdesk_user"/>
+
+                    <!-- Approval state bar (always shown) -->
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="draft,in_review,approved,refused"/>
+
                 </header>
 
                 <sheet>
 
-                    <!-- MAIN FIELDS -->
+                    <!-- ── Ribbons ───────────────────────────────────── -->
                     <widget name="web_ribbon"
-                        title="Waiting Approval"
-                        bg_color="text-bg-warning"
-                        invisible="state != 'in_review'" />
-                    <widget name="web_ribbon" title="Done" bg_color="text-bg-success"
-                        invisible="not is_done_stage" />
-                    <widget name="web_ribbon" title="Cancelled" bg_color="text-bg-danger"
-                        invisible="not is_cancelled_stage" />
-                    <group>
-                        <group>
+                            title="Waiting Approval"
+                            bg_color="text-bg-warning"
+                            invisible="state != 'in_review'"/>
+                    <widget name="web_ribbon"
+                            title="Approved"
+                            bg_color="text-bg-success"
+                            invisible="state != 'approved'"/>
+                    <widget name="web_ribbon"
+                            title="Refused"
+                            bg_color="text-bg-danger"
+                            invisible="state != 'refused'"/>
+                    <widget name="web_ribbon"
+                            title="Cancelled"
+                            bg_color="text-bg-secondary"
+                            invisible="not is_cancelled_stage"/>
 
-                            <field name="name" readonly="1" placeholder="TKT-0000" />
-                            <field name="employee_id" />
-                            <field name="category" />
-                            <field name="priority" widget="priority" />
-                            <field name="tag_ids" widget="many2many_tags"
-                                options="{'color_field': 'color', 'no_create_edit': True}" />
+                    <!-- ── Main fields ───────────────────────────────── -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1" placeholder="TKT-0000"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Ticket Info">
+                            <field name="employee_id"/>
+                            <field name="category"/>
+                            <field name="priority" widget="priority"/>
+                            <field name="tag_ids"
+                                   widget="many2many_tags"
+                                   options="{'color_field': 'color'}"/>
                         </group>
-                        <group>
-                            <field name="stage_id" />
-                            <field name="assigned_to" />
-                            <field name="date_requested" />
-                            <field name="date_closed" />
-                            <field name="approved_by" readonly="1" />
+                        <group string="Assignment &amp; Dates">
+                            <field name="stage_id"/>
+                            <field name="assigned_to"/>
+                            <field name="date_requested"/>
+                            <field name="date_closed"/>
+                            <field name="approved_by" readonly="1"/>
                         </group>
                     </group>
-                    <!-- DESCRIPTION -->
+
+                    <!-- ── Description ──────────────────────────────── -->
                     <group string="Description">
-                        <field name="description" nolabel="1" />
+                        <field name="description" nolabel="1"
+                               placeholder="Describe the issue or request in detail…"/>
                     </group>
-                    <!-- DYNAMIC FIELDS PER CATEGORY -->
-                    <!-- IT Support -->
+
+                    <!-- ── Dynamic: IT Support ──────────────────────── -->
                     <group string="IT Support Details" invisible="category != 'it'">
                         <group>
-                            <field name="issue_type" />
-                            <field name="urgency" />
+                            <field name="issue_type"/>
+                            <field name="urgency"/>
                         </group>
                         <group>
-                            <field name="device_tag" />
-                            <field name="affected_system" />
+                            <field name="device_tag"/>
+                            <field name="affected_system"/>
                         </group>
                     </group>
-                    <!-- HR Request -->
+
+                    <!-- ── Dynamic: HR Request ──────────────────────── -->
                     <group string="HR Request Details" invisible="category != 'hr'">
                         <group>
-                            <field name="request_type" />
-                            <field name="effective_date" />
+                            <field name="request_type"/>
+                            <field name="effective_date"/>
                         </group>
                         <group>
-                            <field name="hr_notes" />
+                            <field name="hr_notes"/>
                         </group>
                     </group>
-                    <!-- Facilities -->
+
+                    <!-- ── Dynamic: Facilities ──────────────────────── -->
                     <group string="Facilities Details" invisible="category != 'facilities'">
                         <group>
-                            <field name="location" />
-                            <field name="facility_type" />
+                            <field name="location"/>
+                            <field name="facility_type"/>
                         </group>
                         <group>
-                            <field name="estimated_cost" widget="numeric_tolerance" />
+                            <field name="estimated_cost"/>
                         </group>
                     </group>
-                    <!-- Finance -->
+
+                    <!-- ── Dynamic: Finance ─────────────────────────── -->
                     <group string="Finance Details" invisible="category != 'finance'">
                         <group>
-                            <field name="amount" />
-                            <field name="payment_mode" />
+                            <field name="amount"/>
+                            <field name="payment_mode"/>
                         </group>
                         <group>
-                            <field name="expected_liquidation_date" />
+                            <field name="expected_liquidation_date"/>
                         </group>
                     </group>
-                    <!-- REFUSED REASON -->
-                    <group string="Refused Reason" invisible="state != 'refused'">
-                        <field name="refused_reason" nolabel="1" readonly="1" />
+
+                    <!-- ── Refusal reason (shown only when refused) ─── -->
+                    <group string="Refusal Reason"
+                           invisible="state != 'refused'">
+                        <field name="refused_reason" nolabel="1" readonly="1"/>
                     </group>
-                    <!-- ATTACHMENTS -->
+
+                    <!-- ── Attachments ──────────────────────────────── -->
                     <group string="Attachments">
-                        <field name="attachment_ids" widget="many2many_binary" nolabel="1" />
+                        <field name="attachment_ids" widget="many2many_binary" nolabel="1"/>
                     </group>
 
                 </sheet>
-                <!-- CHATTER -->
-                <chatter />
+
+                <!-- Chatter: messages + activities -->
+                <chatter/>
 
             </form>
         </field>
     </record>
-    <!-- Calendar View -->
-    <record id="view_helpdesk_ticket_calendar" model="ir.ui.view">
-        <field name="name">helpdesk.ticket.calendar</field>
-        <field name="model">helpdesk.ticket</field>
-        <field name="arch" type="xml">
-            <calendar date_start="date_requested" color="priority" mode="month">
-                <field name="name" />
-                <field name="employee_id" />
-            </calendar>
-        </field>
-    </record>
 
-    <!-- Kanban Views -->
-    <record id="helpdesk_ticket_view_kanban" model="ir.ui.view">
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         KANBAN VIEW
+    ════════════════════════════════════════════════════════════════════════ -->
+    <record id="view_helpdesk_ticket_kanban" model="ir.ui.view">
         <field name="name">helpdesk.ticket.kanban</field>
         <field name="model">helpdesk.ticket</field>
         <field name="arch" type="xml">
             <kanban default_group_by="stage_id"
-                quick_create="true"
-                group_create="false"
-                group_delete="false"
-                group_edit="false">
-                <field name="stage_id" />
-                <field name="color" />
-                <field name="is_done_stage" />
-                <field name="is_cancelled_stage" />
-                <field name="employee_id" />
-                <field name="category" />
-                <field name="state" />
+                    quick_create="true"
+                    group_create="false"
+                    group_delete="false"
+                    group_edit="false">
+
+                <field name="color"/>
+                <field name="priority"/>
+                <field name="state"/>
+                <field name="is_done_stage"/>
+                <field name="is_cancelled_stage"/>
+                <field name="employee_id"/>
+                <field name="category"/>
+                <field name="assigned_to"/>
+
                 <templates>
-                    <t t-name="kanban-box">
-                        <div
-                            t-attf-class="#{kanban_color(record.color.raw_value)} oe_kanban_global_click">
-                            <div class="oe_kanban_content">
-                                <div class="o_kanban_record_top">
-                                    <strong class="o_kanban_record_title">
-                                        <field name="name" />
-                                    </strong>
-                                    <span t-if="record.is_done_stage.raw_value"
-                                        class="badge rounded-pill text-bg-success float-end">Done</span>
-                                    <span t-if="record.is_cancelled_stage.raw_value"
-                                        class="badge rounded-pill text-bg-danger float-end">
-                                        Cancelled</span>
-                                    <span
-                                        t-if="record.state.raw_value == 'in_review' and record.is_done_stage.raw_value == False and record.is_cancelled_stage.raw_value == False"
-                                        class="badge rounded-pill text-bg-warning float-end">
-                                        Waiting Approval</span>
-                                </div>
-                                <div>
-                                    <field name="priority" widget="priority" />
-                                </div>
-                                <div>
-                                    <field name="employee_id" />
-                                </div>
-                                <div>
-                                    <field name="category" />
-                                </div>
-                            </div>
+                    <t t-name="card" t-att-class="kanban_color(record.color.raw_value)">
+
+                        <!-- Title row -->
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <strong class="o_kanban_record_title">
+                                <field name="name"/>
+                            </strong>
+                            <!-- State badges -->
+                            <span t-if="record.is_done_stage.raw_value"
+                                  class="badge rounded-pill text-bg-success ms-1">Done</span>
+                            <span t-if="record.is_cancelled_stage.raw_value"
+                                  class="badge rounded-pill text-bg-secondary ms-1">Cancelled</span>
+                            <span t-if="record.state.raw_value == 'in_review' and !record.is_done_stage.raw_value and !record.is_cancelled_stage.raw_value"
+                                  class="badge rounded-pill text-bg-warning ms-1">Waiting Approval</span>
+                            <span t-if="record.state.raw_value == 'refused'"
+                                  class="badge rounded-pill text-bg-danger ms-1">Refused</span>
                         </div>
+
+                        <!-- Priority + category -->
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <field name="priority" widget="priority"/>
+                            <field name="category" class="text-muted small"/>
+                        </div>
+
+                        <!-- Employee + Assigned To -->
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <field name="employee_id" class="small"/>
+                            <field name="assigned_to" widget="many2one_avatar_user" class="ms-auto"/>
+                        </div>
+
+                        <!-- Color picker (kebab menu area is automatic) -->
+                        <field name="color" widget="color_index" invisible="1"/>
+
                     </t>
                 </templates>
             </kanban>
         </field>
     </record>
-    <!-- Graph View -->
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         GRAPH VIEW
+    ════════════════════════════════════════════════════════════════════════ -->
     <record id="view_helpdesk_ticket_graph" model="ir.ui.view">
         <field name="name">helpdesk.ticket.graph</field>
         <field name="model">helpdesk.ticket</field>
         <field name="arch" type="xml">
+            <!-- Supports bar / line / pie switching via the toggle buttons -->
             <graph string="Ticket Trends" type="bar">
-                <field name="category" type="row" />
-                <field name="stage_id" type="col" />
+                <field name="category" type="row" string="Category"/>
+                <field name="stage_id" type="col" string="Stage"/>
             </graph>
         </field>
     </record>
-    <!-- Pivot View -->
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PIVOT VIEW
+    ════════════════════════════════════════════════════════════════════════ -->
     <record id="view_helpdesk_ticket_pivot" model="ir.ui.view">
         <field name="name">helpdesk.ticket.pivot</field>
         <field name="model">helpdesk.ticket</field>
         <field name="arch" type="xml">
             <pivot string="Ticket Analysis" disable_linking="0">
-                <field name="category" type="row" />
-                <field name="stage_id" type="col" />
+                <field name="category" type="row"  string="Category"/>
+                <field name="stage_id" type="col"  string="Stage"/>
+                <!-- count of records is the default measure -->
             </pivot>
         </field>
     </record>
+
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CALENDAR VIEW
+    ════════════════════════════════════════════════════════════════════════ -->
+    <record id="view_helpdesk_ticket_calendar" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.calendar</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="arch" type="xml">
+            <!-- Color by priority; tickets created directly from calendar -->
+            <calendar date_start="date_requested"
+                      color="priority"
+                      mode="month"
+                      quick_create="true">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="priority"/>
+                <field name="stage_id"/>
+            </calendar>
+        </field>
+    </record>
+
 </odoo>

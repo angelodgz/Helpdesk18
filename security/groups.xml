@@ -1,21 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Module category -->
     <record id="module_category_helpdesk" model="ir.module.category">
         <field name="name">Helpdesk</field>
         <field name="sequence">10</field>
     </record>
 
+    <!-- Helpdesk User: can create and see only own tickets -->
     <record id="group_helpdesk_user" model="res.groups">
         <field name="name">User</field>
         <field name="category_id" ref="module_category_helpdesk"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
     </record>
 
+    <!-- Helpdesk Agent: can see all, edit assigned tickets, change stages -->
     <record id="group_helpdesk_agent" model="res.groups">
         <field name="name">Agent</field>
         <field name="category_id" ref="module_category_helpdesk"/>
         <field name="implied_ids" eval="[(4, ref('group_helpdesk_user'))]"/>
     </record>
 
+    <!-- Helpdesk Manager: full access, can approve and refuse -->
     <record id="group_helpdesk_manager" model="res.groups">
         <field name="name">Manager</field>
         <field name="category_id" ref="module_category_helpdesk"/>

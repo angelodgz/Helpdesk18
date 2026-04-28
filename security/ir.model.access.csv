@@ -1,7 +1,9 @@
 id,name,model_id:id,group_id:id,perm_create,perm_read,perm_write,perm_unlink
-access_helpdesk_ticket_user,helpdesk.ticket user,model_helpdesk_ticket,helpdesk_ticket.group_helpdesk_user,1,1,1,0
-access_helpdesk_ticket_agent,helpdesk.ticket agent,model_helpdesk_ticket,helpdesk_ticket.group_helpdesk_agent,1,1,1,0
-access_helpdesk_ticket_manager,helpdesk.ticket manager,model_helpdesk_ticket,helpdesk_ticket.group_helpdesk_manager,1,1,1,1
-access_helpdesk_ticket_stage_user,helpdesk.ticket.stage user,model_helpdesk_ticket_stage,base.group_user,1,1,1,1
-access_helpdesk_tag_user,helpdesk.tag user,model_helpdesk_tag,base.group_user,1,1,1,1
-access_helpdesk_refuse_wizard,helpdesk.refuse.wizard,model_helpdesk_refuse_wizard,,1,1,1,1
+access_helpdesk_ticket_user,helpdesk.ticket (User),model_helpdesk_ticket,helpdesk_ticket.group_helpdesk_user,1,1,1,0
+access_helpdesk_ticket_agent,helpdesk.ticket (Agent),model_helpdesk_ticket,helpdesk_ticket.group_helpdesk_agent,1,1,1,0
+access_helpdesk_ticket_manager,helpdesk.ticket (Manager),model_helpdesk_ticket,helpdesk_ticket.group_helpdesk_manager,1,1,1,1
+access_helpdesk_stage_user,helpdesk.ticket.stage (User),model_helpdesk_ticket_stage,helpdesk_ticket.group_helpdesk_user,0,1,0,0
+access_helpdesk_stage_manager,helpdesk.ticket.stage (Manager),model_helpdesk_ticket_stage,helpdesk_ticket.group_helpdesk_manager,1,1,1,1
+access_helpdesk_tag_user,helpdesk.tag (User),model_helpdesk_tag,helpdesk_ticket.group_helpdesk_user,0,1,0,0
+access_helpdesk_tag_manager,helpdesk.tag (Manager),model_helpdesk_tag,helpdesk_ticket.group_helpdesk_manager,1,1,1,1
+access_helpdesk_refuse_wizard_manager,helpdesk.refuse.wizard (Manager),model_helpdesk_refuse_wizard,helpdesk_ticket.group_helpdesk_manager,1,1,1,1

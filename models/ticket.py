@@ -45,7 +45,7 @@ class HelpdeskTicket(models.Model):
 
     state = fields.Selection([
         ('draft', 'Draft'),
-        ('in_review', 'Waiting Approval'),
+        ('in_review', 'for Approval'),
         ('approved', 'Approved'),
         ('refused', 'Refused'),
     ], default='draft', tracking=True, string='Approval State')
@@ -103,11 +103,11 @@ class HelpdeskTicket(models.Model):
         return self.env['helpdesk.ticket.stage'].search([], order='sequence asc', limit=1)
 
     def action_mark_done(self):
+        print("DEBUG: Mark as Done clicked!")
         # Send the ticket for approval by moving it to the For Approval Done stage
         # This triggers the approval process: state becomes in_review
         self.ensure_one()
         stage = self._get_stage_by_name('For Approval')
-        
         # Explicitly set state to 'in_review' to sync with UI buttons 
         values = {'stage_id': stage.id, 'state': 'in_review'} if stage else {'state': 'in_review'}
         
@@ -180,60 +180,42 @@ class HelpdeskTicket(models.Model):
                 record.message_post(body=f"Ticket assigned to {record.assigned_to.display_name}.")
 
     def write(self, vals):
-        """
-        Enhanced write() to enforce approval workflow logic:
-        - When moving to is_done_stage, automatically set state='in_review'
-        - When approving (state='approved'), set date_closed
-        - Do NOT set date_closed on stage changes
-        - Notify assigned user when assignment changes
-        """
-        import logging
-        _logger = logging.getLogger(__name__)
-        _logger.info("WRITE CALLED: vals=%s, current states=%s", vals, self.mapped('state'))
-
-        # Track old assigned_to for notifications
+        # 1. Track old assigned_to values for chatter notifications
         old_assigned_map = {record.id: record.assigned_to.id for record in self}
 
-        # WORKFLOW RULE: If moving to is_done_stage, set state to 'in_review' (if not already approved/refused)
+        # 2. AUTO-STAGE MOVE: If state is set to 'approved' via button, force move to 'Done' stage
+        if vals.get('state') == 'approved':
+            done_stage = self.env['helpdesk.ticket.stage'].search([('name', '=', 'Done')], limit=1)
+            if done_stage:
+                vals['stage_id'] = done_stage.id
+
+        # 3. STAGE & STATE SYNC: Handle logic that requires the 'stage' variable
         if 'stage_id' in vals:
+            # Browse the stage record based on the ID provided in vals
             stage = self.env['helpdesk.ticket.stage'].browse(vals['stage_id'])
-            if stage and stage.is_done_stage:
-                # Only change state to in_review if it's not already in a final state
+            
+            # RULE: If moving to New or In Progress, reset state to 'draft'
+            if stage.name in ['New', 'In Progress']:
+                vals['state'] = 'draft'
+            
+            # RULE: If moving to for Approval, set state to 'in_review'
+            elif stage.name == 'for Approval':
+                vals['state'] = 'in_review'
+            # Important: Only set to approved if it's not already being set by the button
+            elif stage.name == 'Done':
                 if 'state' not in vals:
-                    vals['state'] = 'in_review'
-                elif vals.get('state') not in ('approved', 'refused'):
-                    vals['state'] = 'in_review'
-                    
-            # CHANGES hindi nire-reset pag For Approval stage
-            elif not stage.is_cancelled_stage:
-             import logging
-            _logger = logging.getLogger(__name__)
-            _logger.info("STAGE NAME: %s, is_done: %s, is_cancelled: %s", 
-                 stage.name, stage.is_done_stage, stage.is_cancelled_stage)
-            if all(r.state not in ('approved', 'refused', 'in_review') for r in self):
-             vals['state'] = 'draft'
-            _logger.info("RESETTING STATE TO DRAFT")
-        
-        
+                    vals['state'] = 'approved'
 
-        # APPROVAL RULE: When state becomes 'approved', set date_closed
-        if vals.get('state') == 'approved' and not vals.get('date_closed'):
-            vals['date_closed'] = fields.Date.context_today(self)
+        # 4. PERFORM THE ACTUAL WRITE: Call the parent class method and store the result
+        result = super(HelpdeskTicket, self).write(vals)
 
-        # Perform the write
-        result = super().write(vals)
-
-        # POST-WRITE: Log when moved to done stage awaiting approval
-        if 'stage_id' in vals:
-            for record in self.filtered(lambda rec: rec.stage_id.is_done_stage and rec.state == 'in_review'):
-                record.message_post(body='Ticket moved to done stage and is awaiting approval.')
-
-        # POST-WRITE: Notify when assigned_to changes
+        # 5. POST-WRITE NOTIFICATIONS: Trigger notifications after database commit
         if 'assigned_to' in vals:
             self._notify_assigned_user(old_assigned_map)
 
+        # 6. Return the boolean result to the Odoo web client
         return result
-
+    
     @api.model_create_multi
     def create(self, vals_list):
         """
@@ -338,8 +320,25 @@ class HrEmployee(models.Model):
 
  # ===== MGA METHOD NASA IBABA =====
 
+    @api.onchange('stage_id')
+    def _onchange_stage_debug(self):
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("DEBUG: ONCHANGE TRIGGERED!")
+        print("New Stage:", self.stage_id.name)
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        if self.stage_id.name in ['New', 'In Progress']:
+            self.state = 'draft'
 
-    
+    def write(self, vals):
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("DEBUG: WRITE METHOD TRIGGERED!")
+        print("Vals:", vals)
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        if 'stage_id' in vals:
+            stage = self.env['helpdesk.ticket.stage'].browse(vals['stage_id'])
+            if stage.name in ['New', 'In Progress']:
+                vals['state'] = 'draft'
+        return super(HelpdeskTicket, self).write(vals)
     
    
    

@@ -143,8 +143,7 @@
                         options="{'clickable': '0'}"
                         groups="helpdesk_ticket.group_helpdesk_user" />
                     <field name="state" widget="statusbar"
-                        statusbar_visible="draft,in_review,approved,refused 
-                           " />
+                        statusbar_visible="draft,in_review,approved,refused" />
                 </header>
 
                 <sheet>

@@ -6,7 +6,6 @@
         <field name="inherit_id" ref="hr.view_employee_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
-
                 <!-- Smart Button 1: Tickets submitted by employee -->
                 <button name="action_view_helpdesk_tickets"
                         type="object"
@@ -16,7 +15,6 @@
                            widget="statinfo" 
                            string="Tickets"/>
                 </button>
-
                 <!-- BONUS Smart Button 2: Tickets assigned to employee -->
                 <button name="action_view_assigned_helpdesk_tickets"
                         type="object"
@@ -26,7 +24,6 @@
                            widget="statinfo" 
                            string="Assigned"/>
                 </button>
-
             </xpath>
         </field>
     </record>

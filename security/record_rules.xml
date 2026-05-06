@@ -2,60 +2,132 @@
 <odoo>
     <data>
 
-        <!-- ══════════════════════════════════════════════════════════════
-             HELPDESK USER — own tickets only (by linked employee)
-        ══════════════════════════════════════════════════════════════════ -->
-        <record id="helpdesk_ticket_rule_user_read" model="ir.rule">
-            <field name="name">Helpdesk User: Read Own Tickets</field>
-            <field name="model_id" ref="model_helpdesk_ticket"/>
-            <field name="groups" eval="[(4, ref('group_helpdesk_user'))]"/>
-            <field name="domain_force">[('employee_id.user_id', '=', user.id)]</field>
-            <field name="perm_read"   eval="True"/>
-            <field name="perm_write"  eval="True"/>
-            <field name="perm_create" eval="True"/>
-            <field name="perm_unlink" eval="False"/>
-        </record>
+        <!--
+        ════════════════════════════════════════════════════════════════════════
+        RECORD RULES — helpdesk.ticket
 
-        <!-- ══════════════════════════════════════════════════════════════
-             HELPDESK AGENT — read all tickets, but edit only assigned ones
-             Note: Odoo ORs rules per permission type independently, so
-             having perm_read=True on rule A and perm_write=True on rule B
-             means: agent can read anything matched by A's domain, and can
-             write anything matched by B's domain.
-        ══════════════════════════════════════════════════════════════════ -->
-        <record id="helpdesk_ticket_rule_agent_read" model="ir.rule">
-            <field name="name">Helpdesk Agent: Read All Tickets</field>
+        Odoo evaluates record rules with OR logic within the same user:
+          - Rules for the same user across all their groups are OR-ed together.
+          - A rule with domain [(1,'=',1)] always wins, giving unrestricted access.
+
+        IMPORTANT: Managers inherit Agent (which inherits User). Without explicit
+        manager rules with always-true domains, the agent/user write rules would
+        restrict managers to only their assigned tickets, blocking Approve/Refuse.
+        ════════════════════════════════════════════════════════════════════════
+        -->
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!--  HELPDESK USER — own tickets only (by employee)                 -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+
+        <record id="rule_ticket_user_read" model="ir.rule">
+            <field name="name">Helpdesk Ticket: User — read own tickets only</field>
             <field name="model_id" ref="model_helpdesk_ticket"/>
-            <field name="groups" eval="[(4, ref('group_helpdesk_agent'))]"/>
-            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="domain_force">[('employee_id.user_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('group_helpdesk_user'))]"/>
             <field name="perm_read"   eval="True"/>
             <field name="perm_write"  eval="False"/>
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
         </record>
 
-        <record id="helpdesk_ticket_rule_agent_write" model="ir.rule">
-            <field name="name">Helpdesk Agent: Edit Assigned Tickets</field>
+        <record id="rule_ticket_user_write" model="ir.rule">
+            <field name="name">Helpdesk Ticket: User — write own tickets only</field>
             <field name="model_id" ref="model_helpdesk_ticket"/>
-            <field name="groups" eval="[(4, ref('group_helpdesk_agent'))]"/>
-            <field name="domain_force">[('assigned_to', '=', user.id)]</field>
+            <field name="domain_force">[('employee_id.user_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('group_helpdesk_user'))]"/>
             <field name="perm_read"   eval="False"/>
             <field name="perm_write"  eval="True"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!--  HELPDESK AGENT — assigned tickets OR team tickets              -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+
+        <record id="rule_ticket_agent_read" model="ir.rule">
+            <field name="name">Helpdesk Ticket: Agent — read assigned or team tickets</field>
+            <field name="model_id" ref="model_helpdesk_ticket"/>
+            <field name="domain_force">
+                ['|',
+                    ('assigned_to', '=', user.id),
+                    ('team_id.member_ids', 'in', [user.id])
+                ]
+            </field>
+            <field name="groups" eval="[(4, ref('group_helpdesk_agent'))]"/>
+            <field name="perm_read"   eval="True"/>
+            <field name="perm_write"  eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_ticket_agent_write" model="ir.rule">
+            <field name="name">Helpdesk Ticket: Agent — write assigned or team tickets</field>
+            <field name="model_id" ref="model_helpdesk_ticket"/>
+            <field name="domain_force">
+                ['|',
+                    ('assigned_to', '=', user.id),
+                    ('team_id.member_ids', 'in', [user.id])
+                ]
+            </field>
+            <field name="groups" eval="[(4, ref('group_helpdesk_agent'))]"/>
+            <field name="perm_read"   eval="False"/>
+            <field name="perm_write"  eval="True"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!--  HELPDESK MANAGER — explicit always-true bypass rules           -->
+        <!--                                                                 -->
+        <!--  Managers inherit Agent+User, so without these bypass rules     -->
+        <!--  the agent/user write rules block managers from approving or    -->
+        <!--  refusing any ticket they are not personally assigned to.       -->
+        <!--  domain [(1,'=',1)] = always true = unrestricted access.        -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+
+        <record id="rule_ticket_manager_read" model="ir.rule">
+            <field name="name">Helpdesk Ticket: Manager — read all tickets</field>
+            <field name="model_id" ref="model_helpdesk_ticket"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('group_helpdesk_manager'))]"/>
+            <field name="perm_read"   eval="True"/>
+            <field name="perm_write"  eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_ticket_manager_write" model="ir.rule">
+            <field name="name">Helpdesk Ticket: Manager — write all tickets</field>
+            <field name="model_id" ref="model_helpdesk_ticket"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('group_helpdesk_manager'))]"/>
+            <field name="perm_read"   eval="False"/>
+            <field name="perm_write"  eval="True"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_ticket_manager_create" model="ir.rule">
+            <field name="name">Helpdesk Ticket: Manager — create tickets</field>
+            <field name="model_id" ref="model_helpdesk_ticket"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('group_helpdesk_manager'))]"/>
+            <field name="perm_read"   eval="False"/>
+            <field name="perm_write"  eval="False"/>
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="False"/>
         </record>
 
-        <!-- ══════════════════════════════════════════════════════════════
-             HELPDESK MANAGER — unrestricted access to everything
-        ══════════════════════════════════════════════════════════════════ -->
-        <record id="helpdesk_ticket_rule_manager" model="ir.rule">
-            <field name="name">Helpdesk Manager: Full Access</field>
+        <record id="rule_ticket_manager_unlink" model="ir.rule">
+            <field name="name">Helpdesk Ticket: Manager — delete tickets</field>
             <field name="model_id" ref="model_helpdesk_ticket"/>
-            <field name="groups" eval="[(4, ref('group_helpdesk_manager'))]"/>
             <field name="domain_force">[(1, '=', 1)]</field>
-            <field name="perm_read"   eval="True"/>
-            <field name="perm_write"  eval="True"/>
-            <field name="perm_create" eval="True"/>
+            <field name="groups" eval="[(4, ref('group_helpdesk_manager'))]"/>
+            <field name="perm_read"   eval="False"/>
+            <field name="perm_write"  eval="False"/>
+            <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="True"/>
         </record>
 

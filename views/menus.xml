@@ -1,70 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- ── Window Actions ─────────────────────────────────────────────── -->
+    <!--
+    ════════════════════════════════════════════════════════════════════════
+    MENU STRUCTURE
+    ════════════════════════════════════════════════════════════════════════
+    Helpdesk                    ← root app menu (all groups)
+    ├── My Tickets              ← visible to all (Users, Agents, Managers)
+    ├── All Tickets             ← visible to Agents and Managers
+    ├── Waiting Approval        ← visible to Managers only
+    └── Configuration           ← visible to Managers only
+        ├── Stages
+        └── Tags
+    ════════════════════════════════════════════════════════════════════════
+    -->
 
-    <!-- Main ticket action — all 7 views activated, Kanban is default -->
-    <record id="action_helpdesk_ticket" model="ir.actions.act_window">
-        <field name="name">Tickets</field>
-        <field name="res_model">helpdesk.ticket</field>
-        <!-- Kanban first = default view when clicking the menu item -->
-        <field name="view_mode">kanban,list,form,pivot,graph,calendar,activity</field>
-        <field name="context">{}</field>
-        <field name="search_view_id" ref="view_helpdesk_ticket_search"/>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No tickets yet! Create your first one.
-            </p>
-        </field>
-    </record>
-
-    <!-- Stage management action (Manager only) -->
-    <record id="action_helpdesk_stage" model="ir.actions.act_window">
-        <field name="name">Stages</field>
-        <field name="res_model">helpdesk.ticket.stage</field>
-        <field name="view_mode">list,form</field>
-    </record>
-
-    <!-- Tag management action (Manager only) -->
-    <record id="action_helpdesk_tag" model="ir.actions.act_window">
-        <field name="name">Tags</field>
-        <field name="res_model">helpdesk.tag</field>
-        <field name="view_mode">list,form</field>
-    </record>
-
-    <!-- ── Menus ──────────────────────────────────────────────────────── -->
-
+    <!-- ── Root application menu ──────────────────────────────────────── -->
     <menuitem id="menu_helpdesk_root"
               name="Helpdesk"
+              web_icon="helpdesk_ticket,static/description/icon.png"
+              sequence="70"
+              groups="helpdesk_ticket.group_helpdesk_user"/>
+
+    <!-- ── My Tickets (default for all users — opens Kanban) ───────────── -->
+    <menuitem id="menu_helpdesk_my_tickets"
+              name="My Tickets"
+              parent="menu_helpdesk_root"
+              action="action_helpdesk_my_tickets"
               sequence="10"
               groups="helpdesk_ticket.group_helpdesk_user"/>
 
-    <!-- Main: Tickets → opens Kanban by default -->
-    <menuitem id="menu_helpdesk_tickets"
-              name="Tickets"
+    <!-- ── All Tickets (Agents and Managers) ─────────────────────────── -->
+    <menuitem id="menu_helpdesk_all_tickets"
+              name="All Tickets"
               parent="menu_helpdesk_root"
               action="action_helpdesk_ticket"
-              sequence="1"/>
+              sequence="20"
+              groups="helpdesk_ticket.group_helpdesk_agent"/>
 
-    <!-- Configuration submenu (Manager only) -->
-    <menuitem id="menu_helpdesk_config"
-              name="Configuration"
+    <!-- ── Waiting Approval (Managers only) ─────────────────────────── -->
+    <menuitem id="menu_helpdesk_waiting_approval"
+              name="Waiting Approval"
               parent="menu_helpdesk_root"
-              groups="helpdesk_ticket.group_helpdesk_manager"
-              sequence="10"/>
-
-    <menuitem id="menu_helpdesk_stage"
-              name="Stages"
-              parent="menu_helpdesk_config"
-              action="action_helpdesk_stage"
-              sequence="1"
+              action="action_helpdesk_waiting_approval"
+              sequence="30"
               groups="helpdesk_ticket.group_helpdesk_manager"/>
 
-    <menuitem id="menu_helpdesk_tag"
+    <!-- ── Configuration submenu (Managers only) ─────────────────────── -->
+    <menuitem id="menu_helpdesk_configuration"
+              name="Configuration"
+              parent="menu_helpdesk_root"
+              sequence="90"
+              groups="helpdesk_ticket.group_helpdesk_manager"/>
+
+    <menuitem id="menu_helpdesk_stages"
+              name="Stages"
+              parent="menu_helpdesk_configuration"
+              action="action_helpdesk_stage"
+              sequence="10"
+              groups="helpdesk_ticket.group_helpdesk_manager"/>
+
+    <menuitem id="menu_helpdesk_tags"
               name="Tags"
-              parent="menu_helpdesk_config"
+              parent="menu_helpdesk_configuration"
               action="action_helpdesk_tag"
-              sequence="2"
+              sequence="20"
+              groups="helpdesk_ticket.group_helpdesk_manager"/>
+
+    <menuitem id="menu_helpdesk_teams"
+              name="Support Teams"
+              parent="menu_helpdesk_configuration"
+              action="action_helpdesk_team"
+              sequence="30"
               groups="helpdesk_ticket.group_helpdesk_manager"/>
 
 </odoo>

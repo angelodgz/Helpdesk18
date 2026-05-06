@@ -1,44 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Pre-loaded pipeline stages as required by the spec -->
-    <data noupdate="0">
+    <data noupdate="1">
 
         <record id="stage_new" model="helpdesk.ticket.stage">
             <field name="name">New</field>
             <field name="sequence">1</field>
+            <field name="is_done_stage" eval="False"/>
+            <field name="is_cancelled_stage" eval="False"/>
+            <field name="fold" eval="False"/>
+            <field name="description">Ticket has been submitted and is awaiting assignment.</field>
         </record>
 
         <record id="stage_in_progress" model="helpdesk.ticket.stage">
             <field name="name">In Progress</field>
             <field name="sequence">2</field>
+            <field name="is_done_stage" eval="False"/>
+            <field name="is_cancelled_stage" eval="False"/>
+            <field name="fold" eval="False"/>
+            <field name="description">Ticket is actively being worked on by an agent.</field>
         </record>
 
-        <!-- Moves ticket to Waiting Approval state via is_approval_stage flag -->
         <record id="stage_for_approval" model="helpdesk.ticket.stage">
-            <field name="name">For Approval - Done</field>
+            <field name="name">For Approval – Done</field>
             <field name="sequence">3</field>
-            <field name="is_approval_stage">True</field>
+            <field name="is_done_stage" eval="False"/>
+            <field name="is_cancelled_stage" eval="False"/>
+            <field name="fold" eval="False"/>
+            <field name="description">Agent has completed work and is preparing to submit for approval.</field>
         </record>
 
-        <!-- is_done_stage=True triggers approval auto-close logic -->
         <record id="stage_done" model="helpdesk.ticket.stage">
             <field name="name">Done</field>
             <field name="sequence">4</field>
-            <field name="is_done_stage">True</field>
+            <field name="is_done_stage" eval="True"/>
+            <field name="is_cancelled_stage" eval="False"/>
+            <field name="fold" eval="False"/>
+            <field name="description">Ticket is resolved and awaiting or has passed manager approval.</field>
         </record>
 
         <record id="stage_cancelled" model="helpdesk.ticket.stage">
             <field name="name">Cancelled</field>
             <field name="sequence">5</field>
-            <field name="is_cancelled_stage">True</field>
-            <field name="fold">True</field>
+            <field name="is_done_stage" eval="False"/>
+            <field name="is_cancelled_stage" eval="True"/>
+            <field name="fold" eval="True"/>
+            <field name="description">Ticket was cancelled and will not be resolved.</field>
         </record>
 
-        <!-- fold=True per spec; rejected tickets hidden from default kanban -->
-        <record id="stage_rejected" model="helpdesk.ticket.stage">
+        <record id="stage_approval_rejected" model="helpdesk.ticket.stage">
             <field name="name">Approval Rejected</field>
             <field name="sequence">6</field>
-            <field name="fold">True</field>
+            <field name="is_done_stage" eval="False"/>
+            <field name="is_cancelled_stage" eval="False"/>
+            <field name="fold" eval="True"/>
+            <field name="description">Manager refused the ticket. Can be reopened and moved back to In Progress.</field>
         </record>
 
     </data>

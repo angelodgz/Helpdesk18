@@ -1,415 +1,469 @@
-"""Main Helpdesk Ticket model with full workflow, approval and smart buttons."""
-
-from odoo import models, fields, api
-from odoo.exceptions import ValidationError
+from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 
 class HelpdeskTicket(models.Model):
     _name = 'helpdesk.ticket'
     _description = 'Helpdesk Ticket'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _rec_name = 'name'
-    _order = 'date_requested desc, id desc'
+    _order = 'priority desc, date_requested desc, id desc'
 
-    # ── Core fields ───────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # Core Fields
+    # ─────────────────────────────────────────────────────────────────────────
 
     name = fields.Char(
         string='Ticket Reference',
-        readonly=True,
         default='New',
+        readonly=True,
         copy=False,
+        index=True,
     )
     employee_id = fields.Many2one(
         'hr.employee',
-        string='Requesting Employee',
+        string='Submitted By',
         required=True,
         tracking=True,
+        default=lambda self: self.env['hr.employee'].search(
+            [('user_id', '=', self.env.uid)], limit=1
+        ),
     )
-    category = fields.Selection([
-        ('it',         'IT Support'),
-        ('hr',         'HR Request'),
-        ('facilities', 'Facilities'),
-        ('finance',    'Finance'),
-        ('general',    'General'),
-    ], string='Category', default='general', required=True, tracking=True)
-
-    priority = fields.Selection([
-        ('0', 'Low'),
-        ('1', 'Normal'),
-        ('2', 'High'),
-        ('3', 'Critical'),
-    ], string='Priority', default='1', tracking=True)
-
+    category = fields.Selection(
+        selection=[
+            ('it_support', 'IT Support'),
+            ('hr_request', 'HR Request'),
+            ('facilities', 'Facilities'),
+            ('finance', 'Finance'),
+            ('general', 'General'),
+        ],
+        string='Category',
+        required=True,
+        tracking=True,
+        index=True,
+    )
+    priority = fields.Selection(
+        selection=[
+            ('0', 'Low'),
+            ('1', 'Normal'),
+            ('2', 'High'),
+            ('3', 'Critical'),
+        ],
+        string='Priority',
+        default='1',
+        tracking=True,
+        index=True,
+    )
     description = fields.Text(string='Description')
-
     stage_id = fields.Many2one(
         'helpdesk.ticket.stage',
         string='Stage',
-        tracking=True,
         group_expand='_read_group_stage_ids',
-        default=lambda self: self.env['helpdesk.ticket.stage'].search(
-            [], order='sequence asc', limit=1
-        ),
+        tracking=True,
+        copy=False,
+        index=True,
+        default=lambda self: self._default_stage_id(),
     )
-
-    # Approval state — mirrors stage transitions (spec field: Approval_state)
-    state = fields.Selection([
-        ('draft',     'Draft'),
-        ('in_review', 'Waiting Approval'),
-        ('approved',  'Approved'),
-        ('refused',   'Refused'),
-    ], string='Approval State', default='draft', tracking=True)
-
-    # Related booleans stored for domain / decoration use
-    is_done_stage = fields.Boolean(
-        related='stage_id.is_done_stage', store=True, string='Is Done Stage'
+    approval_state = fields.Selection(
+        selection=[
+            ('draft', 'Draft'),
+            ('in_review', 'Waiting Approval'),
+            ('approved', 'Approved'),
+            ('refused', 'Refused'),
+        ],
+        string='Approval Status',
+        default='draft',
+        tracking=True,
+        copy=False,
+        index=True,
     )
-    is_cancelled_stage = fields.Boolean(
-        related='stage_id.is_cancelled_stage', store=True, string='Is Cancelled'
+    attachment_ids = fields.Many2many(
+        'ir.attachment',
+        'helpdesk_ticket_attachment_rel',
+        'ticket_id',
+        'attachment_id',
+        string='Attachments',
     )
-
-    attachment_ids = fields.Many2many('ir.attachment', string='Attachments')
-    tag_ids = fields.Many2many('helpdesk.tag', string='Tags')
-
-    assigned_to = fields.Many2one('res.users', string='Assigned To', tracking=True)
-
     date_requested = fields.Datetime(
-        string='Date Requested', default=fields.Datetime.now, tracking=True
+        string='Date Submitted',
+        default=fields.Datetime.now,
+        readonly=True,
+        copy=False,
     )
-    date_closed = fields.Date(string='Date Closed')
-
+    date_closed = fields.Date(
+        string='Date Closed',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
     approved_by = fields.Many2one(
-        'res.users', string='Approved By', readonly=True, tracking=True
+        'res.users',
+        string='Approved By',
+        readonly=True,
+        copy=False,
+        tracking=True,
     )
-    refused_reason = fields.Text(string='Refusal Reason')
+    refused_reason = fields.Text(
+        string='Refusal Reason',
+        readonly=True,
+        copy=False,
+    )
+    tag_ids = fields.Many2many(
+        'helpdesk.tag',
+        'helpdesk_ticket_tag_rel',
+        'ticket_id',
+        'tag_id',
+        string='Tags',
+    )
+    assigned_to = fields.Many2one(
+        'res.users',
+        string='Assigned To',
+        tracking=True,
+        index=True,
+    )
+    partner_id = fields.Many2one(
+        'res.partner',
+        string='Contact',
+        tracking=True,
+        index=True,
+        help='The partner (contact) who submitted or is associated with this ticket.',
+        default=lambda self: self.env.user.partner_id,
+    )
+    team_id = fields.Many2one(
+        'helpdesk.team',
+        string='Support Team',
+        tracking=True,
+        index=True,
+        help='The support team responsible for handling this ticket.',
+    )
+    color = fields.Integer(string='Color Index', default=0)
 
-    color = fields.Integer(string='Color Index')
+    # ─────────────────────────────────────────────────────────────────────────
+    # IT Support Category Fields
+    # ─────────────────────────────────────────────────────────────────────────
 
-    # ── Category-specific fields: IT Support ──────────────────────────────────
+    issue_type = fields.Selection(
+        selection=[
+            ('hardware', 'Hardware'),
+            ('software', 'Software'),
+            ('network', 'Network / Connectivity'),
+            ('account', 'Account Access / Credentials'),
+            ('email', 'Email / Communication Tools'),
+            ('other', 'Other'),
+        ],
+        string='Issue Type',
+    )
+    urgency = fields.Selection(
+        selection=[
+            ('low', 'Low — Can wait'),
+            ('medium', 'Medium — Affects work but has workaround'),
+            ('high', 'High — Significant impact on operations'),
+            ('critical', 'Critical — Complete stoppage'),
+        ],
+        string='Urgency Level',
+    )
+    device_tag = fields.Char(string='Device Tag / Asset No.')
+    affected_system = fields.Char(string='Affected System / Application')
 
-    issue_type = fields.Selection([
-        ('hardware', 'Hardware'),
-        ('software', 'Software'),
-        ('network',  'Network'),
-        ('access',   'Access / Permissions'),
-    ], string='Issue Type')
+    # ─────────────────────────────────────────────────────────────────────────
+    # HR Request Category Fields
+    # ─────────────────────────────────────────────────────────────────────────
 
-    urgency = fields.Selection([
-        ('low',      'Low'),
-        ('medium',   'Medium'),
-        ('high',     'High'),
-        ('critical', 'Critical'),
-    ], string='Urgency Level')
-
-    device_tag = fields.Char(string='Device Tag / Serial No.')
-    affected_system = fields.Char(string='Affected System')
-
-    # ── Category-specific fields: HR Request ──────────────────────────────────
-
-    request_type = fields.Selection([
-        ('leave',       'Leave'),
-        ('payroll',     'Payroll'),
-        ('certificate', 'Employment Certificate'),
-        ('other',       'Other'),
-    ], string='Request Type')
-
+    request_type = fields.Selection(
+        selection=[
+            ('leave', 'Leave Request'),
+            ('payroll', 'Payroll Concern'),
+            ('benefits', 'Benefits Inquiry'),
+            ('clearance', 'Clearance / Exit'),
+            ('certificate', 'Employment Certificate'),
+            ('other', 'Other'),
+        ],
+        string='Request Type',
+    )
     effective_date = fields.Date(string='Effective Date')
-    hr_notes = fields.Text(string='HR Notes')
+    hr_notes = fields.Text(string='Additional HR Notes')
 
-    # ── Category-specific fields: Facilities ──────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # Facilities Category Fields
+    # ─────────────────────────────────────────────────────────────────────────
 
     location = fields.Char(string='Location / Area')
+    facility_type = fields.Selection(
+        selection=[
+            ('office', 'Office / Workspace'),
+            ('equipment', 'Equipment / Furniture'),
+            ('utilities', 'Utilities (Electricity, Water, A/C)'),
+            ('maintenance', 'Preventive / Corrective Maintenance'),
+            ('sanitation', 'Sanitation / Cleaning'),
+            ('other', 'Other'),
+        ],
+        string='Facility Type',
+    )
+    estimated_cost = fields.Float(string='Estimated Cost (PHP)', digits=(12, 2))
 
-    facility_type = fields.Selection([
-        ('repair',        'Repair'),
-        ('maintenance',   'Maintenance'),
-        ('installation',  'Installation'),
-        ('cleaning',      'Cleaning'),
-    ], string='Facility Type')
+    # ─────────────────────────────────────────────────────────────────────────
+    # Finance Category Fields
+    # ─────────────────────────────────────────────────────────────────────────
 
-    estimated_cost = fields.Float(string='Estimated Cost', digits=(16, 2))
-
-    # ── Category-specific fields: Finance ────────────────────────────────────
-
-    amount = fields.Float(string='Amount', digits=(16, 2))
-
-    payment_mode = fields.Selection([
-        ('cash',  'Cash'),
-        ('bank',  'Bank Transfer'),
-        ('check', 'Check'),
-        ('gcash', 'GCash'),
-    ], string='Payment Mode')
-
+    amount = fields.Float(string='Amount (PHP)', digits=(12, 2))
+    payment_mode = fields.Selection(
+        selection=[
+            ('cash', 'Cash'),
+            ('check', 'Check'),
+            ('bank_transfer', 'Bank Transfer'),
+            ('gcash', 'GCash / E-Wallet'),
+            ('other', 'Other'),
+        ],
+        string='Payment Mode',
+    )
     expected_liquidation_date = fields.Date(string='Expected Liquidation Date')
 
-    # ── Kanban group expansion ────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # Computed / Relational Helpers
+    # ─────────────────────────────────────────────────────────────────────────
+
+    is_done_stage = fields.Boolean(
+        related='stage_id.is_done_stage',
+        string='Is Done Stage',
+        store=False,
+    )
+    is_cancelled_stage = fields.Boolean(
+        related='stage_id.is_cancelled_stage',
+        string='Is Cancelled Stage',
+        store=False,
+    )
+    attachment_count = fields.Integer(
+        string='Attachment Count',
+        compute='_compute_attachment_count',
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Defaults & Group Expand
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _default_stage_id(self):
+        """Return the first stage (lowest sequence) as the default."""
+        return self.env['helpdesk.ticket.stage'].search(
+            [], order='sequence asc', limit=1
+        )
+
+    def _compute_attachment_count(self):
+        for record in self:
+            record.attachment_count = len(record.attachment_ids)
 
     @api.model
-    def _read_group_stage_ids(self, stages, domain):
-        """Always show all pipeline stages in Kanban, even if empty."""
+    def _read_group_stage_ids(self, stages, domain, **kwargs):
+        """Always show all stages in Kanban, even if empty."""
         return stages.search([], order='sequence asc')
 
-    # ── Internal helpers ──────────────────────────────────────────────────────
-
-    def _get_stage(self, xml_id):
-        """Return a stage record by its XML id, or False."""
-        return self.env.ref(f'helpdesk_ticket.{xml_id}', raise_if_not_found=False)
-
-    # ── Action buttons ────────────────────────────────────────────────────────
-
-    def action_mark_done(self):
-        """
-        Employee/Agent clicks 'Submit for Approval'.
-        Moves ticket to the 'For Approval - Done' stage → triggers in_review.
-        """
-        self.ensure_one()
-        stage = self._get_stage('stage_for_approval')
-        if not stage:
-            raise ValidationError(
-                "The 'For Approval - Done' stage is missing. "
-                "Please check your stage configuration."
-            )
-        self.write({'stage_id': stage.id})
-        self.message_post(
-            body=(
-                f"<b>Submitted for approval</b> by {self.env.user.name}. "
-                f"Waiting for Manager review."
-            )
-        )
-
-    def action_approve(self):
-        """Manager approves the ticket → moves to Done, records approver."""
-        self.ensure_one()
-        stage = self._get_stage('stage_done')
-        if not stage:
-            raise ValidationError("The 'Done' stage is not configured.")
-        self.write({
-            'stage_id':   stage.id,
-            'approved_by': self.env.user.id,
-        })
-        self.message_post(
-            body=(
-                f"✅ Ticket <b>approved</b> by <b>{self.env.user.name}</b>. "
-                f"Ticket is now closed."
-            )
-        )
-
-    def action_refuse(self):
-        """Manager clicks Refuse → opens the reason wizard as a popup."""
-        self.ensure_one()
-        return {
-            'type':      'ir.actions.act_window',
-            'name':      'Refuse Reason',
-            'res_model': 'helpdesk.refuse.wizard',
-            'view_mode': 'form',
-            'target':    'new',
-            'context':   {'default_ticket_id': self.id},
-        }
-
-    def action_apply_refusal(self, reason):
-        """
-        Called by the refusal wizard after the manager confirms.
-        Moves ticket to 'Approval Rejected' and saves the reason.
-        """
-        self.ensure_one()
-        stage = self._get_stage('stage_rejected')
-        if not stage:
-            raise ValidationError("The 'Approval Rejected' stage is not configured.")
-        self.write({
-            'stage_id':      stage.id,
-            'refused_reason': reason,
-        })
-        self.message_post(
-            body=(
-                f"❌ Ticket <b>refused</b> by <b>{self.env.user.name}</b>.<br/>"
-                f"<b>Reason:</b> {reason}"
-            )
-        )
-
-    def action_reopen(self):
-        """Reopen a refused ticket back to In Progress."""
-        self.ensure_one()
-        stage = (
-            self._get_stage('stage_in_progress') or self._get_stage('stage_new')
-        )
-        self.write({
-            'stage_id':      stage.id if stage else False,
-            'refused_reason': False,
-            'approved_by':    False,
-            'date_closed':    False,
-        })
-        self.message_post(
-            body=(
-                f"🔄 Ticket <b>reopened</b> by {self.env.user.name} "
-                f"and moved back to In Progress."
-            )
-        )
-
-    def action_cancel(self):
-        """Cancel the ticket directly."""
-        self.ensure_one()
-        stage = self._get_stage('stage_cancelled')
-        if not stage:
-            raise ValidationError("The 'Cancelled' stage is not configured.")
-        self.write({'stage_id': stage.id})
-        self.message_post(body=f"🚫 Ticket <b>cancelled</b> by {self.env.user.name}.")
-
-    # ── Constraints ───────────────────────────────────────────────────────────
-
-    @api.constrains('state', 'refused_reason')
-    def _validate_refused_reason(self):
-        for record in self:
-            if record.state == 'refused' and not record.refused_reason:
-                raise ValidationError(
-                    "A refusal reason is required when a ticket is refused."
-                )
-
-    # ── ORM overrides ─────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # ORM Overrides
+    # ─────────────────────────────────────────────────────────────────────────
 
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            # Auto-assign TKT-XXXX sequence
             if vals.get('name', 'New') == 'New':
                 vals['name'] = (
                     self.env['ir.sequence'].next_by_code('helpdesk.ticket') or 'New'
                 )
-            # Ensure timestamps
             if not vals.get('date_requested'):
                 vals['date_requested'] = fields.Datetime.now()
-            vals.setdefault('state', 'draft')
-
+            # Auto-populate partner_id from the submitting employee if not set
+            if not vals.get('partner_id') and vals.get('employee_id'):
+                employee = self.env['hr.employee'].browse(vals['employee_id'])
+                if employee.user_id and employee.user_id.partner_id:
+                    vals['partner_id'] = employee.user_id.partner_id.id
+            elif not vals.get('partner_id'):
+                vals['partner_id'] = self.env.user.partner_id.id
         records = super().create(vals_list)
-
-        for record, vals in zip(records, vals_list):
-            if vals.get('assigned_to') and record.assigned_to:
-                record.message_post(
-                    body=(
-                        f"📋 Ticket created and assigned to "
-                        f"<b>{record.assigned_to.display_name}</b>."
-                    ),
-                    partner_ids=[record.assigned_to.partner_id.id],
-                )
-            else:
-                record.message_post(body="📋 Ticket created.")
-
+        for record in records:
+            if record.assigned_to:
+                record._notify_assigned()
         return records
 
     def write(self, vals):
-        # Capture current assignment before the write
-        old_assigned_map = {r.id: r.assigned_to.id for r in self}
-
-        # ── Auto-manage approval_state and date_closed on stage change ────────
+        # Auto-fill date_closed when moved to a terminal stage
         if 'stage_id' in vals:
-            stage = self.env['helpdesk.ticket.stage'].browse(vals['stage_id'])
-
-            approval_stage = self._get_stage('stage_for_approval')
-            rejected_stage = self._get_stage('stage_rejected')
-
-            if approval_stage and stage == approval_stage:
-                # "For Approval - Done" stage → trigger waiting approval
-                vals.setdefault('state', 'in_review')
-
-            elif stage.is_done_stage:
-                # Done stage (is_done_stage = True) → approved + auto date_closed
-                vals.setdefault('state', 'approved')
-                vals.setdefault('date_closed', fields.Date.context_today(self))
-
-            elif rejected_stage and stage == rejected_stage:
-                # Approval Rejected stage → refused
-                vals.setdefault('state', 'refused')
-
+            new_stage = self.env['helpdesk.ticket.stage'].browse(vals['stage_id'])
+            if new_stage.is_done_stage or new_stage.is_cancelled_stage:
+                vals.setdefault('date_closed', fields.Date.today())
             else:
-                # New, In Progress, Cancelled, or any other → reset to draft
-                vals.setdefault('state', 'draft')
+                vals['date_closed'] = False
 
-        result = super().write(vals)
+            # Auto-trigger review when dragged into a done stage from draft.
+            # Never overwrite an already-approved or already-refused state,
+            # and never overwrite an approval_state being explicitly set in vals.
+            if new_stage.is_done_stage and 'approval_state' not in vals:
+                for record in self:
+                    if record.approval_state == 'draft':
+                        vals['approval_state'] = 'in_review'
+                        break  # all records in this multi-write share the same vals dict
 
-        # ── Notify newly assigned agent ───────────────────────────────────────
-        if 'assigned_to' in vals:
-            self._notify_assigned_user(old_assigned_map)
+        # Notify newly assigned agents
+        if 'assigned_to' in vals and vals['assigned_to']:
+            result = super().write(vals)
+            for record in self:
+                record._notify_assigned()
+            return result
 
-        return result
+        return super().write(vals)
 
-    def _notify_assigned_user(self, old_assigned_map):
-        """Post a chatter message and notify the newly assigned agent."""
-        for record in self:
-            old_user_id = old_assigned_map.get(record.id)
-            if record.assigned_to and old_user_id != record.assigned_to.id:
-                record.message_post(
-                    body=(
-                        f"👤 Ticket assigned to "
-                        f"<b>{record.assigned_to.display_name}</b>."
-                    ),
-                    partner_ids=[record.assigned_to.partner_id.id],
-                )
+    # ─────────────────────────────────────────────────────────────────────────
+    # Business Logic / Button Actions
+    # ─────────────────────────────────────────────────────────────────────────
 
-
-# ── HR Employee extension ─────────────────────────────────────────────────────
-
-class HrEmployee(models.Model):
-    _inherit = 'hr.employee'
-
-    helpdesk_ticket_count = fields.Integer(
-        string='Tickets Submitted',
-        compute='_compute_helpdesk_ticket_counts',
-    )
-    helpdesk_assigned_ticket_count = fields.Integer(
-        string='Tickets Assigned',
-        compute='_compute_helpdesk_ticket_counts',
-    )
-
-    def _compute_helpdesk_ticket_counts(self):
-        Ticket = self.env['helpdesk.ticket']
-
-        # Tickets created by each employee
-        created_data = Ticket.read_group(
-            domain=[('employee_id', 'in', self.ids)],
-            fields=['employee_id'],
-            groupby=['employee_id'],
+    def action_mark_as_done(self):
+        """Move ticket to the Done stage and submit for manager approval."""
+        self.ensure_one()
+        done_stage = self.env['helpdesk.ticket.stage'].search(
+            [('is_done_stage', '=', True)], order='sequence asc', limit=1
         )
-        created_map = {
-            d['employee_id'][0]: d['employee_id_count'] for d in created_data
-        }
-
-        # Tickets assigned to each employee's linked user
-        user_ids = self.mapped('user_id').ids
-        assigned_data = Ticket.read_group(
-            domain=[('assigned_to', 'in', user_ids)],
-            fields=['assigned_to'],
-            groupby=['assigned_to'],
+        if not done_stage:
+            raise UserError(
+                'No stage is marked as "Done Stage". '
+                'Please configure a Done stage under Helpdesk → Configuration → Stages.'
+            )
+        self.write({
+            'stage_id': done_stage.id,
+            'approval_state': 'in_review',
+            'date_closed': fields.Date.today(),
+        })
+        self.message_post(
+            body=(
+                f'<b>Submitted for Approval</b><br/>'
+                f'Ticket <b>{self.name}</b> has been moved to <b>{done_stage.name}</b> '
+                f'and is now awaiting manager approval.'
+            )
         )
-        assigned_map = {
-            d['assigned_to'][0]: d['assigned_to_count'] for d in assigned_data
-        }
 
-        for emp in self:
-            emp.helpdesk_ticket_count = created_map.get(emp.id, 0)
-            user_id = emp.user_id.id if emp.user_id else False
-            emp.helpdesk_assigned_ticket_count = assigned_map.get(user_id, 0)
+    def action_approve(self):
+        """Approve the ticket. Only Helpdesk Managers can call this."""
+        self.ensure_one()
+        if self.approval_state != 'in_review':
+            raise UserError('Only tickets waiting for approval can be approved.')
+        self.write({
+            'approval_state': 'approved',
+            'approved_by': self.env.uid,
+        })
+        # Notify the ticket submitter
+        partner_ids = []
+        if self.employee_id.user_id and self.employee_id.user_id.partner_id:
+            partner_ids.append(self.employee_id.user_id.partner_id.id)
+        self.message_post(
+            body=(
+                f'<b>Ticket Approved ✔</b><br/>'
+                f'Approved by <b>{self.env.user.name}</b>. '
+                f'This ticket is now officially closed.'
+            ),
+            partner_ids=partner_ids,
+        )
 
-    def action_view_helpdesk_tickets(self):
-        """Smart button: open tickets submitted by this employee."""
+    def action_open_refuse_wizard(self):
+        """Open the refuse reason wizard. Only Helpdesk Managers can call this."""
+        self.ensure_one()
+        if self.approval_state != 'in_review':
+            raise UserError('Only tickets waiting for approval can be refused.')
         return {
-            'type':      'ir.actions.act_window',
-            'name':      f'Tickets by {self.name}',
-            'res_model': 'helpdesk.ticket',
-            'view_mode': 'kanban,list,form',
-            'domain':    [('employee_id', '=', self.id)],
-            'context':   {'default_employee_id': self.id},
+            'name': 'Refuse Ticket',
+            'type': 'ir.actions.act_window',
+            'res_model': 'helpdesk.refuse.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_ticket_id': self.id},
         }
 
-    def action_view_assigned_helpdesk_tickets(self):
-        """Bonus smart button: open tickets assigned to this employee."""
-        domain = (
-            [('assigned_to', '=', self.user_id.id)]
-            if self.user_id
-            else [('assigned_to', '=', False)]
+    def action_reopen(self):
+        """Reopen a refused ticket and move it back to In Progress."""
+        self.ensure_one()
+        in_progress_stage = self.env['helpdesk.ticket.stage'].search(
+            [('name', 'ilike', 'In Progress')], order='sequence asc', limit=1
         )
+        if not in_progress_stage:
+            # Fallback: second stage by sequence
+            in_progress_stage = self.env['helpdesk.ticket.stage'].search(
+                [], order='sequence asc', limit=2
+            )
+            in_progress_stage = in_progress_stage[-1] if len(in_progress_stage) > 1 else in_progress_stage
+
+        self.write({
+            'stage_id': in_progress_stage.id,
+            'approval_state': 'draft',
+            'date_closed': False,
+            'refused_reason': False,
+        })
+        self.message_post(
+            body=(
+                f'<b>Ticket Reopened</b><br/>'
+                f'Reopened by <b>{self.env.user.name}</b>. '
+                f'Ticket moved back to <b>{in_progress_stage.name}</b>.'
+            )
+        )
+
+    def action_open_attachments_view(self):
+        """Open attachments linked to this ticket."""
+        self.ensure_one()
         return {
-            'type':      'ir.actions.act_window',
-            'name':      f'Tickets Assigned to {self.name}',
-            'res_model': 'helpdesk.ticket',
-            'view_mode': 'kanban,list,form',
-            'domain':    domain,
+            'name': 'Attachments',
+            'type': 'ir.actions.act_window',
+            'res_model': 'ir.attachment',
+            'view_mode': 'list,form',
+            'domain': [('id', 'in', self.attachment_ids.ids)],
         }
+
+    def action_cancel(self):
+        """Cancel the ticket."""
+        self.ensure_one()
+        cancelled_stage = self.env['helpdesk.ticket.stage'].search(
+            [('is_cancelled_stage', '=', True)], order='sequence asc', limit=1
+        )
+        if not cancelled_stage:
+            raise UserError(
+                'No stage is marked as "Cancelled Stage". '
+                'Please configure one under Helpdesk → Configuration → Stages.'
+            )
+        self.write({
+            'stage_id': cancelled_stage.id,
+            'approval_state': 'draft',
+            'date_closed': fields.Date.today(),
+        })
+        self.message_post(
+            body=(
+                f'<b>Ticket Cancelled</b><br/>'
+                f'Cancelled by <b>{self.env.user.name}</b>.'
+            )
+        )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Onchange Helpers
+    # ─────────────────────────────────────────────────────────────────────────
+
+    @api.onchange('stage_id')
+    def _onchange_stage_id(self):
+        """Auto-fill date_closed when stage is terminal."""
+        if self.stage_id.is_done_stage or self.stage_id.is_cancelled_stage:
+            self.date_closed = fields.Date.today()
+        else:
+            self.date_closed = False
+
+    @api.onchange('assigned_to')
+    def _onchange_assigned_to(self):
+        """Warn if the assigned user has no helpdesk group membership."""
+        pass  # Extend if needed
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Internal Helpers
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _notify_assigned(self):
+        """Post a chatter message notifying the newly assigned agent."""
+        self.ensure_one()
+        if not self.assigned_to:
+            return
+        partner = self.assigned_to.partner_id
+        self.message_post(
+            body=(
+                f'<b>Ticket Assigned</b><br/>'
+                f'This ticket has been assigned to <b>{self.assigned_to.name}</b>.'
+            ),
+            partner_ids=[partner.id] if partner else [],
+        )

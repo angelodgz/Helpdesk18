@@ -1,32 +1,48 @@
-"""Stage model for the helpdesk ticket pipeline."""
-
-from odoo import models, fields
+from odoo import api, fields, models
 
 
 class HelpdeskTicketStage(models.Model):
     _name = 'helpdesk.ticket.stage'
     _description = 'Helpdesk Ticket Stage'
-    _order = 'sequence, id'
+    _order = 'sequence asc, id asc'
 
     name = fields.Char(string='Stage Name', required=True, translate=True)
-    sequence = fields.Integer(string='Sequence', default=10)
-
-    # ── Stage-type flags ──────────────────────────────────────────────────────
+    sequence = fields.Integer(
+        string='Sequence',
+        default=10,
+        help='Controls the order stages appear in the Kanban pipeline.',
+    )
     is_done_stage = fields.Boolean(
-        string='Is Done Stage',
-        help='When True, moving a ticket here triggers the approval process.',
+        string='Done Stage',
+        default=False,
+        help='When checked, moving a ticket to this stage triggers the approval process.',
     )
     is_cancelled_stage = fields.Boolean(
-        string='Is Cancelled Stage',
-        help='Marks this stage as a closed / cancelled state.',
+        string='Cancelled Stage',
+        default=False,
+        help='When checked, tickets in this stage are considered cancelled.',
     )
-    is_approval_stage = fields.Boolean(
-        string='Is "For Approval" Stage',
-        help='Internal flag: the stage that triggers Waiting Approval state.',
-    )
-
     fold = fields.Boolean(
         string='Folded in Kanban',
-        help='Fold this column by default in the Kanban pipeline.',
+        default=False,
+        help='Fold this stage by default in the Kanban view.',
     )
-    description = fields.Text(string='Internal Notes')
+    description = fields.Text(
+        string='Internal Notes',
+        help='Optional internal description of what this stage represents.',
+    )
+    # Count of tickets in this stage (used for Kanban header)
+    ticket_count = fields.Integer(
+        string='Tickets',
+        compute='_compute_ticket_count',
+    )
+
+    def _compute_ticket_count(self):
+        ticket_data = self.env['helpdesk.ticket']._read_group(
+            domain=[('stage_id', 'in', self.ids)],
+            groupby=['stage_id'],
+            aggregates=['__count'],
+        )
+        counts = {stage.id: count for stage, count in ticket_data}
+        for stage in self:
+            stage.ticket_count = counts.get(stage.id, 0)

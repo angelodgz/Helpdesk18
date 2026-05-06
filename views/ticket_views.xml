@@ -1,54 +1,431 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- ════════════════════════════════════════════════════════════════════
-         SEARCH VIEW
-    ════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  FORM VIEW                                                         -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <record id="view_helpdesk_ticket_form" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.form</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="arch" type="xml">
+            <form string="Helpdesk Ticket">
+
+                <header>
+                    <!-- Submitter / Agent actions -->
+                    <button name="action_mark_as_done"
+                            string="Mark as Done"
+                            type="object"
+                            class="btn-primary"
+                            invisible="approval_state != 'draft' or is_done_stage or is_cancelled_stage"
+                            confirm="Submit this ticket for manager approval? It will be moved to the Done stage."/>
+                    <button name="action_cancel"
+                            string="Cancel Ticket"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="is_cancelled_stage or approval_state in ('approved', 'in_review')"
+                            confirm="Are you sure you want to cancel this ticket?"/>
+                    <button name="action_reopen"
+                            string="Reopen Ticket"
+                            type="object"
+                            class="btn-warning"
+                            invisible="approval_state != 'refused'"
+                            confirm="Reopen this ticket and move it back to In Progress?"/>
+
+                    <!-- Manager-only approval actions — visible only when waiting approval -->
+                    <button name="action_approve"
+                            string="✔ Approve"
+                            type="object"
+                            class="btn-success"
+                            groups="helpdesk_ticket.group_helpdesk_manager"
+                            invisible="approval_state != 'in_review'"/>
+                    <button name="action_open_refuse_wizard"
+                            string="✗ Refuse"
+                            type="object"
+                            class="btn-danger"
+                            groups="helpdesk_ticket.group_helpdesk_manager"
+                            invisible="approval_state != 'in_review'"/>
+
+                    <!-- Stage pipeline statusbar -->
+                    <field name="stage_id"
+                           widget="statusbar"
+                           options="{'clickable': '1'}"/>
+                </header>
+
+                <sheet>
+                    <!-- Approval state ribbon -->
+                    <widget name="web_ribbon"
+                            title="Approved ✔"
+                            bg_color="bg-success"
+                            invisible="approval_state != 'approved'"/>
+                    <widget name="web_ribbon"
+                            title="Refused ✗"
+                            bg_color="bg-danger"
+                            invisible="approval_state != 'refused'"/>
+                    <widget name="web_ribbon"
+                            title="Waiting Approval"
+                            bg_color="bg-warning"
+                            invisible="approval_state != 'in_review'"/>
+                    <widget name="web_ribbon"
+                            title="Cancelled"
+                            bg_color="bg-secondary"
+                            invisible="not is_cancelled_stage"/>
+
+                    <!-- Smart Buttons -->
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button"
+                                type="object"
+                                name="action_open_attachments_view"
+                                icon="fa-paperclip"
+                                invisible="attachment_count == 0">
+                            <field name="attachment_count" string="Attachments" widget="statinfo"/>
+                        </button>
+                    </div>
+
+                    <!-- Ticket Reference heading -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1" class="text-muted"/>
+                        </h1>
+                    </div>
+
+                    <!-- Core ticket information -->
+                    <group>
+                        <group string="Ticket Details">
+                            <field name="employee_id"
+                                   options="{'no_create': True}"
+                                   readonly="approval_state in ('approved', 'refused')"/>
+                            <field name="category"
+                                   readonly="approval_state in ('approved', 'refused')"/>
+                            <field name="priority" widget="priority"/>
+                            <field name="tag_ids" widget="many2many_tags"
+                                   options="{'color_field': 'color', 'no_create_edit': True}"/>
+                        </group>
+                        <group string="Assignment &amp; Timeline">
+                            <field name="assigned_to"
+                                   widget="many2one_avatar_user"
+                                   options="{'no_create': True}"
+                                   groups="helpdesk_ticket.group_helpdesk_agent"/>
+                            <field name="team_id"
+                                   options="{'no_create': True}"
+                                   groups="helpdesk_ticket.group_helpdesk_agent"/>
+                            <field name="date_requested" readonly="1"/>
+                            <field name="date_closed" readonly="1"/>
+                            <!-- Approval state shown as a simple read-only field, not a second statusbar -->
+                            <field name="approval_state" readonly="1"/>
+                            <field name="approved_by"
+                                   readonly="1"
+                                   invisible="not approved_by"/>
+                        </group>
+                    </group>
+
+                    <!-- Description -->
+                    <group string="Description">
+                        <field name="description"
+                               nolabel="1"
+                               placeholder="Describe the issue or request in detail..."
+                               readonly="approval_state in ('approved', 'refused')"/>
+                    </group>
+
+                    <!-- IT Support -->
+                    <group string="IT Support Details"
+                           invisible="category != 'it_support'">
+                        <group>
+                            <field name="issue_type"
+                                   invisible="category != 'it_support'"
+                                   required="category == 'it_support'"/>
+                            <field name="urgency"
+                                   invisible="category != 'it_support'"/>
+                        </group>
+                        <group>
+                            <field name="device_tag"
+                                   invisible="category != 'it_support'"
+                                   placeholder="e.g. PC-042, LT-017"/>
+                            <field name="affected_system"
+                                   invisible="category != 'it_support'"
+                                   placeholder="e.g. Odoo ERP, MS Teams"/>
+                        </group>
+                    </group>
+
+                    <!-- HR Request -->
+                    <group string="HR Request Details"
+                           invisible="category != 'hr_request'">
+                        <group>
+                            <field name="request_type"
+                                   invisible="category != 'hr_request'"
+                                   required="category == 'hr_request'"/>
+                            <field name="effective_date"
+                                   invisible="category != 'hr_request'"/>
+                        </group>
+                        <group>
+                            <field name="hr_notes"
+                                   invisible="category != 'hr_request'"
+                                   placeholder="Additional context for HR..."/>
+                        </group>
+                    </group>
+
+                    <!-- Facilities -->
+                    <group string="Facilities Details"
+                           invisible="category != 'facilities'">
+                        <group>
+                            <field name="location"
+                                   invisible="category != 'facilities'"
+                                   placeholder="e.g. 3rd Floor, Server Room"/>
+                            <field name="facility_type"
+                                   invisible="category != 'facilities'"
+                                   required="category == 'facilities'"/>
+                        </group>
+                        <group>
+                            <field name="estimated_cost"
+                                   invisible="category != 'facilities'"
+                                   string="Estimated Cost (PHP)"/>
+                        </group>
+                    </group>
+
+                    <!-- Finance -->
+                    <group string="Finance Details"
+                           invisible="category != 'finance'">
+                        <group>
+                            <field name="amount"
+                                   invisible="category != 'finance'"
+                                   required="category == 'finance'"
+                                   string="Amount (PHP)"/>
+                            <field name="payment_mode"
+                                   invisible="category != 'finance'"
+                                   required="category == 'finance'"/>
+                        </group>
+                        <group>
+                            <field name="expected_liquidation_date"
+                                   invisible="category != 'finance'"/>
+                        </group>
+                    </group>
+
+                    <!-- Refusal reason — shown only when refused -->
+                    <group string="Refusal Details"
+                           invisible="approval_state != 'refused'">
+                        <field name="refused_reason"
+                               nolabel="1"
+                               readonly="1"/>
+                    </group>
+
+                    <!-- Attachments -->
+                    <group string="Supporting Documents">
+                        <field name="attachment_ids"
+                               widget="many2many_attachments"
+                               nolabel="1"/>
+                    </group>
+
+                </sheet>
+
+                <chatter/>
+
+            </form>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  LIST VIEW                                                         -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <record id="view_helpdesk_ticket_list" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.list</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="arch" type="xml">
+            <!-- Decorations only on high/critical priority and approval states -->
+            <list string="Helpdesk Tickets"
+                  decoration-danger="priority == '3'"
+                  decoration-warning="priority == '2'"
+                  decoration-success="approval_state == 'approved'"
+                  decoration-muted="is_cancelled_stage">
+                <field name="name" string="Reference"/>
+                <field name="employee_id" optional="show"/>
+                <field name="category"/>
+                <field name="priority" widget="priority"/>
+                <field name="stage_id"/>
+                <field name="approval_state" widget="badge"
+                       decoration-success="approval_state == 'approved'"
+                       decoration-danger="approval_state == 'refused'"
+                       decoration-warning="approval_state == 'in_review'"
+                       decoration-info="approval_state == 'draft'"/>
+                <field name="assigned_to" widget="many2one_avatar_user" optional="show"/>
+                <field name="date_requested"/>
+                <field name="date_closed" optional="hide"/>
+                <!-- Hidden fields needed for decorations -->
+                <field name="is_cancelled_stage" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  KANBAN VIEW                                                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <record id="view_helpdesk_ticket_kanban" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.kanban</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="stage_id"
+                    group_create="false"
+                    quick_create="true"
+                    class="o_kanban_small_column">
+
+                <field name="name"/>
+                <field name="priority"/>
+                <field name="category"/>
+                <field name="approval_state"/>
+                <field name="assigned_to"/>
+                <field name="employee_id"/>
+                <field name="tag_ids"/>
+                <field name="color"/>
+                <field name="stage_id"/>
+                <field name="is_done_stage"/>
+                <field name="is_cancelled_stage"/>
+                <field name="date_requested"/>
+
+                <progressbar field="approval_state"
+                             colors='{"in_review": "warning", "approved": "success", "refused": "danger"}'/>
+
+                <templates>
+                    <t t-name="card">
+                        <!-- Title row -->
+                        <div class="o_kanban_record_top mb-1">
+                            <div class="o_kanban_record_headings">
+                                <strong class="o_kanban_record_title">
+                                    <field name="name"/>
+                                </strong>
+                            </div>
+                            <div class="o_kanban_record_top_right">
+                                <field name="priority" widget="priority"/>
+                            </div>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="o_kanban_record_body">
+                            <div class="text-muted small mb-1">
+                                <i class="fa fa-user me-1"/>
+                                <field name="employee_id"/>
+                            </div>
+                            <div class="small mb-1">
+                                <span class="badge text-bg-light">
+                                    <field name="category"/>
+                                </span>
+                            </div>
+                            <field name="tag_ids" widget="many2many_tags"
+                                   options="{'color_field': 'color'}"/>
+                        </div>
+
+                        <!-- Footer: avatar + approval badge -->
+                        <div class="o_kanban_record_bottom">
+                            <div class="oe_kanban_bottom_left">
+                                <field name="assigned_to" widget="many2one_avatar_user"/>
+                            </div>
+                            <div class="oe_kanban_bottom_right d-flex align-items-center gap-1">
+                                <span t-if="record.approval_state.raw_value == 'in_review'"
+                                      class="badge text-bg-warning">Waiting</span>
+                                <span t-if="record.approval_state.raw_value == 'approved'"
+                                      class="badge text-bg-success">Approved</span>
+                                <span t-if="record.approval_state.raw_value == 'refused'"
+                                      class="badge text-bg-danger">Refused</span>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  PIVOT VIEW                                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <record id="view_helpdesk_ticket_pivot" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.pivot</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="arch" type="xml">
+            <pivot string="Ticket Analysis" sample="1">
+                <field name="category" type="row"/>
+                <field name="stage_id" type="col"/>
+                <field name="name" type="measure" string="# Tickets"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  GRAPH VIEW                                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <record id="view_helpdesk_ticket_graph" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.graph</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="arch" type="xml">
+            <graph string="Ticket Trends"
+                   type="bar"
+                   stacked="True"
+                   sample="1">
+                <field name="category" type="row"/>
+                <field name="stage_id" type="col"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  CALENDAR VIEW                                                     -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <record id="view_helpdesk_ticket_calendar" model="ir.ui.view">
+        <field name="name">helpdesk.ticket.calendar</field>
+        <field name="model">helpdesk.ticket</field>
+        <field name="arch" type="xml">
+            <calendar string="Ticket Calendar"
+                      date_start="date_requested"
+                      color="priority"
+                      quick_create="True"
+                      mode="month">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="category"/>
+                <field name="priority"/>
+                <field name="assigned_to"/>
+                <field name="stage_id"/>
+            </calendar>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  SEARCH VIEW                                                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <record id="view_helpdesk_ticket_search" model="ir.ui.view">
         <field name="name">helpdesk.ticket.search</field>
         <field name="model">helpdesk.ticket</field>
         <field name="arch" type="xml">
             <search string="Search Tickets">
 
-                <!-- Searchable fields -->
-                <field name="name"        string="Ticket Ref"/>
-                <field name="employee_id" string="Employee"/>
-                <field name="assigned_to" string="Assigned To"/>
-                <field name="category"    string="Category"/>
-                <field name="tag_ids"     string="Tags"/>
+                <field name="name" string="Reference"/>
+                <field name="employee_id"/>
+                <field name="assigned_to"/>
+                <field name="tag_ids"/>
+                <field name="category"/>
+                <field name="stage_id"/>
 
-                <!-- ── Filters ──────────────────────────────────────── -->
+                <separator/>
                 <filter name="my_tickets"
                         string="My Tickets"
                         domain="[('employee_id.user_id', '=', uid)]"/>
-
+                <filter name="assigned_to_me"
+                        string="Assigned to Me"
+                        domain="[('assigned_to', '=', uid)]"
+                        groups="helpdesk_ticket.group_helpdesk_agent"/>
+                <separator/>
                 <filter name="waiting_approval"
                         string="Waiting Approval"
-                        domain="[('state', '=', 'in_review')]"/>
-
+                        domain="[('approval_state', '=', 'in_review')]"/>
                 <filter name="high_priority"
                         string="High Priority"
                         domain="[('priority', 'in', ['2', '3'])]"/>
-
-                <filter name="overdue"
-                        string="Overdue (7+ days open)"
-                        domain="[
-                            ('date_closed', '=', False),
-                            ('is_cancelled_stage', '=', False),
-                            ('date_requested', '&lt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S'))
-                        ]"/>
-
                 <filter name="done"
                         string="Done"
                         domain="[('stage_id.is_done_stage', '=', True)]"/>
-
                 <filter name="cancelled"
                         string="Cancelled"
                         domain="[('stage_id.is_cancelled_stage', '=', True)]"/>
+                <filter name="overdue"
+                        string="Overdue (7+ days open)"
+                        domain="[('date_closed', '=', False), ('date_requested', '&lt;=', (context_today() + relativedelta(days=-7)).strftime('%Y-%m-%d'))]"/>
 
-                <separator/>
-
-                <!-- ── Group By ─────────────────────────────────────── -->
                 <group expand="0" string="Group By">
                     <filter name="group_category"
                             string="Category"
@@ -62,10 +439,10 @@
                     <filter name="group_assigned"
                             string="Assigned To"
                             context="{'group_by': 'assigned_to'}"/>
-                    <filter name="group_date_week"
+                    <filter name="group_week"
                             string="Date Requested (Week)"
                             context="{'group_by': 'date_requested:week'}"/>
-                    <filter name="group_date_month"
+                    <filter name="group_month"
                             string="Date Requested (Month)"
                             context="{'group_by': 'date_requested:month'}"/>
                 </group>
@@ -74,331 +451,34 @@
         </field>
     </record>
 
-
-    <!-- ════════════════════════════════════════════════════════════════════
-         LIST VIEW
-    ════════════════════════════════════════════════════════════════════════ -->
-    <record id="view_helpdesk_ticket_list" model="ir.ui.view">
-        <field name="name">helpdesk.ticket.list</field>
-        <field name="model">helpdesk.ticket</field>
-        <field name="arch" type="xml">
-            <!-- decoration-danger = Critical, decoration-warning = High, decoration-success = Approved -->
-            <list string="All Tickets"
-                  decoration-danger="priority == '3'"
-                  decoration-warning="priority == '2'"
-                  decoration-success="state == 'approved'">
-                <field name="name"/>
-                <field name="employee_id"/>
-                <field name="category"/>
-                <field name="priority"/>
-                <field name="stage_id"/>
-                <field name="assigned_to"/>
-                <field name="date_requested"/>
-                <field name="state" string="Approval State"/>
-            </list>
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!--  WINDOW ACTIONS                                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <record id="action_helpdesk_ticket" model="ir.actions.act_window">
+        <field name="name">Tickets</field>
+        <field name="res_model">helpdesk.ticket</field>
+        <field name="view_mode">kanban,list,form,pivot,graph,calendar,activity</field>
+        <field name="search_view_id" ref="view_helpdesk_ticket_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No tickets found!</p>
+            <p>Create a new ticket to get started.</p>
         </field>
     </record>
 
-
-    <!-- ════════════════════════════════════════════════════════════════════
-         FORM VIEW
-    ════════════════════════════════════════════════════════════════════════ -->
-    <record id="view_helpdesk_ticket_form" model="ir.ui.view">
-        <field name="name">helpdesk.ticket.form</field>
-        <field name="model">helpdesk.ticket</field>
-        <field name="arch" type="xml">
-            <form string="Helpdesk Ticket">
-
-                <!-- ── Header / Status Bar ──────────────────────────── -->
-                <header>
-
-                    <!-- Submit for Approval — visible to User/Agent while still in draft -->
-                    <button name="action_mark_done"
-                            string="Submit for Approval"
-                            type="object"
-                            class="btn-primary"
-                            invisible="state != 'draft'"/>
-
-                    <!-- Cancel — visible to submitter while in draft -->
-                    <button name="action_cancel"
-                            string="Cancel Ticket"
-                            type="object"
-                            class="btn-secondary"
-                            invisible="state not in ('draft', 'in_review')"
-                            groups="helpdesk_ticket.group_helpdesk_user"/>
-
-                    <!-- Approve — Manager only, visible while waiting approval -->
-                    <button name="action_approve"
-                            string="Approve"
-                            type="object"
-                            class="btn-success"
-                            groups="helpdesk_ticket.group_helpdesk_manager"
-                            invisible="state != 'in_review'"/>
-
-                    <!-- Refuse — Manager only, visible while waiting approval -->
-                    <button name="action_refuse"
-                            string="Refuse"
-                            type="object"
-                            class="btn-danger"
-                            groups="helpdesk_ticket.group_helpdesk_manager"
-                            invisible="state != 'in_review'"/>
-
-                    <!-- Reopen — visible to anyone on refused tickets -->
-                    <button name="action_reopen"
-                            string="Reopen"
-                            type="object"
-                            class="btn-secondary"
-                            invisible="state != 'refused'"/>
-
-                    <!-- Stage status bar: clickable for Agent/Manager -->
-                    <field name="stage_id"
-                           widget="statusbar"
-                           options="{'clickable': '1'}"
-                           groups="helpdesk_ticket.group_helpdesk_agent,helpdesk_ticket.group_helpdesk_manager"/>
-
-                    <!-- Stage status bar: read-only for plain Users -->
-                    <field name="stage_id"
-                           widget="statusbar"
-                           options="{'clickable': '0'}"
-                           groups="helpdesk_ticket.group_helpdesk_user"/>
-
-                    <!-- Approval state bar (always shown) -->
-                    <field name="state"
-                           widget="statusbar"
-                           statusbar_visible="draft,in_review,approved,refused"/>
-
-                </header>
-
-                <sheet>
-
-                    <!-- ── Ribbons ───────────────────────────────────── -->
-                    <widget name="web_ribbon"
-                            title="Waiting Approval"
-                            bg_color="text-bg-warning"
-                            invisible="state != 'in_review'"/>
-                    <widget name="web_ribbon"
-                            title="Approved"
-                            bg_color="text-bg-success"
-                            invisible="state != 'approved'"/>
-                    <widget name="web_ribbon"
-                            title="Refused"
-                            bg_color="text-bg-danger"
-                            invisible="state != 'refused'"/>
-                    <widget name="web_ribbon"
-                            title="Cancelled"
-                            bg_color="text-bg-secondary"
-                            invisible="not is_cancelled_stage"/>
-
-                    <!-- ── Main fields ───────────────────────────────── -->
-                    <div class="oe_title">
-                        <h1>
-                            <field name="name" readonly="1" placeholder="TKT-0000"/>
-                        </h1>
-                    </div>
-
-                    <group>
-                        <group string="Ticket Info">
-                            <field name="employee_id"/>
-                            <field name="category"/>
-                            <field name="priority" widget="priority"/>
-                            <field name="tag_ids"
-                                   widget="many2many_tags"
-                                   options="{'color_field': 'color'}"/>
-                        </group>
-                        <group string="Assignment &amp; Dates">
-                            <field name="stage_id"/>
-                            <field name="assigned_to"/>
-                            <field name="date_requested"/>
-                            <field name="date_closed"/>
-                            <field name="approved_by" readonly="1"/>
-                        </group>
-                    </group>
-
-                    <!-- ── Description ──────────────────────────────── -->
-                    <group string="Description">
-                        <field name="description" nolabel="1"
-                               placeholder="Describe the issue or request in detail…"/>
-                    </group>
-
-                    <!-- ── Dynamic: IT Support ──────────────────────── -->
-                    <group string="IT Support Details" invisible="category != 'it'">
-                        <group>
-                            <field name="issue_type"/>
-                            <field name="urgency"/>
-                        </group>
-                        <group>
-                            <field name="device_tag"/>
-                            <field name="affected_system"/>
-                        </group>
-                    </group>
-
-                    <!-- ── Dynamic: HR Request ──────────────────────── -->
-                    <group string="HR Request Details" invisible="category != 'hr'">
-                        <group>
-                            <field name="request_type"/>
-                            <field name="effective_date"/>
-                        </group>
-                        <group>
-                            <field name="hr_notes"/>
-                        </group>
-                    </group>
-
-                    <!-- ── Dynamic: Facilities ──────────────────────── -->
-                    <group string="Facilities Details" invisible="category != 'facilities'">
-                        <group>
-                            <field name="location"/>
-                            <field name="facility_type"/>
-                        </group>
-                        <group>
-                            <field name="estimated_cost"/>
-                        </group>
-                    </group>
-
-                    <!-- ── Dynamic: Finance ─────────────────────────── -->
-                    <group string="Finance Details" invisible="category != 'finance'">
-                        <group>
-                            <field name="amount"/>
-                            <field name="payment_mode"/>
-                        </group>
-                        <group>
-                            <field name="expected_liquidation_date"/>
-                        </group>
-                    </group>
-
-                    <!-- ── Refusal reason (shown only when refused) ─── -->
-                    <group string="Refusal Reason"
-                           invisible="state != 'refused'">
-                        <field name="refused_reason" nolabel="1" readonly="1"/>
-                    </group>
-
-                    <!-- ── Attachments ──────────────────────────────── -->
-                    <group string="Attachments">
-                        <field name="attachment_ids" widget="many2many_binary" nolabel="1"/>
-                    </group>
-
-                </sheet>
-
-                <!-- Chatter: messages + activities -->
-                <chatter/>
-
-            </form>
-        </field>
+    <record id="action_helpdesk_my_tickets" model="ir.actions.act_window">
+        <field name="name">My Tickets</field>
+        <field name="res_model">helpdesk.ticket</field>
+        <field name="view_mode">kanban,list,form,calendar,activity</field>
+        <field name="search_view_id" ref="view_helpdesk_ticket_search"/>
+        <field name="domain">[('employee_id.user_id', '=', uid)]</field>
     </record>
 
-
-    <!-- ════════════════════════════════════════════════════════════════════
-         KANBAN VIEW
-    ════════════════════════════════════════════════════════════════════════ -->
-    <record id="view_helpdesk_ticket_kanban" model="ir.ui.view">
-        <field name="name">helpdesk.ticket.kanban</field>
-        <field name="model">helpdesk.ticket</field>
-        <field name="arch" type="xml">
-            <kanban default_group_by="stage_id"
-                    quick_create="true"
-                    group_create="false"
-                    group_delete="false"
-                    group_edit="false">
-
-                <field name="color"/>
-                <field name="priority"/>
-                <field name="state"/>
-                <field name="is_done_stage"/>
-                <field name="is_cancelled_stage"/>
-                <field name="employee_id"/>
-                <field name="category"/>
-                <field name="assigned_to"/>
-
-                <templates>
-                    <t t-name="card" t-att-class="kanban_color(record.color.raw_value)">
-
-                        <!-- Title row -->
-                        <div class="d-flex justify-content-between align-items-start mb-1">
-                            <strong class="o_kanban_record_title">
-                                <field name="name"/>
-                            </strong>
-                            <!-- State badges -->
-                            <span t-if="record.is_done_stage.raw_value"
-                                  class="badge rounded-pill text-bg-success ms-1">Done</span>
-                            <span t-if="record.is_cancelled_stage.raw_value"
-                                  class="badge rounded-pill text-bg-secondary ms-1">Cancelled</span>
-                            <span t-if="record.state.raw_value == 'in_review' and !record.is_done_stage.raw_value and !record.is_cancelled_stage.raw_value"
-                                  class="badge rounded-pill text-bg-warning ms-1">Waiting Approval</span>
-                            <span t-if="record.state.raw_value == 'refused'"
-                                  class="badge rounded-pill text-bg-danger ms-1">Refused</span>
-                        </div>
-
-                        <!-- Priority + category -->
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <field name="priority" widget="priority"/>
-                            <field name="category" class="text-muted small"/>
-                        </div>
-
-                        <!-- Employee + Assigned To -->
-                        <div class="d-flex justify-content-between align-items-center mt-1">
-                            <field name="employee_id" class="small"/>
-                            <field name="assigned_to" widget="many2one_avatar_user" class="ms-auto"/>
-                        </div>
-
-                        <!-- Color picker (kebab menu area is automatic) -->
-                        <field name="color" widget="color_index" invisible="1"/>
-
-                    </t>
-                </templates>
-            </kanban>
-        </field>
-    </record>
-
-
-    <!-- ════════════════════════════════════════════════════════════════════
-         GRAPH VIEW
-    ════════════════════════════════════════════════════════════════════════ -->
-    <record id="view_helpdesk_ticket_graph" model="ir.ui.view">
-        <field name="name">helpdesk.ticket.graph</field>
-        <field name="model">helpdesk.ticket</field>
-        <field name="arch" type="xml">
-            <!-- Supports bar / line / pie switching via the toggle buttons -->
-            <graph string="Ticket Trends" type="bar">
-                <field name="category" type="row" string="Category"/>
-                <field name="stage_id" type="col" string="Stage"/>
-            </graph>
-        </field>
-    </record>
-
-
-    <!-- ════════════════════════════════════════════════════════════════════
-         PIVOT VIEW
-    ════════════════════════════════════════════════════════════════════════ -->
-    <record id="view_helpdesk_ticket_pivot" model="ir.ui.view">
-        <field name="name">helpdesk.ticket.pivot</field>
-        <field name="model">helpdesk.ticket</field>
-        <field name="arch" type="xml">
-            <pivot string="Ticket Analysis" disable_linking="0">
-                <field name="category" type="row"  string="Category"/>
-                <field name="stage_id" type="col"  string="Stage"/>
-                <!-- count of records is the default measure -->
-            </pivot>
-        </field>
-    </record>
-
-
-    <!-- ════════════════════════════════════════════════════════════════════
-         CALENDAR VIEW
-    ════════════════════════════════════════════════════════════════════════ -->
-    <record id="view_helpdesk_ticket_calendar" model="ir.ui.view">
-        <field name="name">helpdesk.ticket.calendar</field>
-        <field name="model">helpdesk.ticket</field>
-        <field name="arch" type="xml">
-            <!-- Color by priority; tickets created directly from calendar -->
-            <calendar date_start="date_requested"
-                      color="priority"
-                      mode="month"
-                      quick_create="true">
-                <field name="name"/>
-                <field name="employee_id"/>
-                <field name="priority"/>
-                <field name="stage_id"/>
-            </calendar>
-        </field>
+    <record id="action_helpdesk_waiting_approval" model="ir.actions.act_window">
+        <field name="name">Waiting Approval</field>
+        <field name="res_model">helpdesk.ticket</field>
+        <field name="view_mode">list,form,kanban</field>
+        <field name="search_view_id" ref="view_helpdesk_ticket_search"/>
+        <field name="domain">[('approval_state', '=', 'in_review')]</field>
     </record>
 
 </odoo>

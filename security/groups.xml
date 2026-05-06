@@ -1,29 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Module category -->
-    <record id="module_category_helpdesk" model="ir.module.category">
-        <field name="name">Helpdesk</field>
-        <field name="sequence">10</field>
-    </record>
+    <data>
 
-    <!-- Helpdesk User: can create and see only own tickets -->
-    <record id="group_helpdesk_user" model="res.groups">
-        <field name="name">User</field>
-        <field name="category_id" ref="module_category_helpdesk"/>
-        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-    </record>
+        <!--
+        ════════════════════════════════════════════════════════════════════════
+        GROUP HIERARCHY
+        ════════════════════════════════════════════════════════════════════════
 
-    <!-- Helpdesk Agent: can see all, edit assigned tickets, change stages -->
-    <record id="group_helpdesk_agent" model="res.groups">
-        <field name="name">Agent</field>
-        <field name="category_id" ref="module_category_helpdesk"/>
-        <field name="implied_ids" eval="[(4, ref('group_helpdesk_user'))]"/>
-    </record>
+          Helpdesk User    — End user / ticket creator.
+                             Creates & views only their own tickets.
+                             No access to internal notes, stages, or configuration.
 
-    <!-- Helpdesk Manager: full access, can approve and refuse -->
-    <record id="group_helpdesk_manager" model="res.groups">
-        <field name="name">Manager</field>
-        <field name="category_id" ref="module_category_helpdesk"/>
-        <field name="implied_ids" eval="[(4, ref('group_helpdesk_agent'))]"/>
-    </record>
+            └── Helpdesk Agent  — Support staff who handles and resolves tickets.
+                                  Views tickets assigned to them or their team.
+                                  Can update status, add internal notes, log activities.
+                                  Cannot delete tickets or change system configuration.
+
+                  └── Helpdesk Manager  — Full supervisor/admin access.
+                                          Unrestricted CRUD on all tickets.
+                                          Manages teams, agents, SLA, and configuration.
+                                          Approves / refuses tickets.
+
+        Inheritance is additive: Agent has all User permissions + agent extras.
+        Manager has all Agent permissions + manager extras.
+        ════════════════════════════════════════════════════════════════════════
+        -->
+
+        <!-- ── 1. Helpdesk User (Customer / Ticket Creator) ────────────────── -->
+        <record id="group_helpdesk_user" model="res.groups">
+            <field name="name">Helpdesk User</field>
+            <field name="category_id" ref="base.module_category_services"/>
+            <field name="comment">
+                End user who reports issues or requests support.
+                Can create tickets, view and comment on their own tickets, and attach files.
+                Cannot modify workflow states, see internal notes, or assign tickets.
+            </field>
+        </record>
+
+        <!-- ── 2. Helpdesk Agent (Support Staff) ───────────────────────────── -->
+        <record id="group_helpdesk_agent" model="res.groups">
+            <field name="name">Helpdesk Agent</field>
+            <field name="category_id" ref="base.module_category_services"/>
+            <field name="implied_ids" eval="[(4, ref('group_helpdesk_user'))]"/>
+            <field name="comment">
+                Support staff who handles and resolves tickets.
+                Views tickets assigned to them or their support team.
+                Can update ticket status, add internal notes, assign tickets, and log activities.
+                Cannot delete tickets or change system configuration.
+            </field>
+        </record>
+
+        <!-- ── 3. Helpdesk Manager (Admin / Supervisor) ────────────────────── -->
+        <record id="group_helpdesk_manager" model="res.groups">
+            <field name="name">Helpdesk Manager</field>
+            <field name="category_id" ref="base.module_category_services"/>
+            <field name="implied_ids" eval="[(4, ref('group_helpdesk_agent'))]"/>
+            <field name="comment">
+                Oversees all tickets, agents, SLA, and reporting.
+                Full unrestricted access to all records.
+                Can approve/refuse tickets, manage teams and agents,
+                configure helpdesk settings, and access all reports and dashboards.
+            </field>
+        </record>
+
+    </data>
 </odoo>

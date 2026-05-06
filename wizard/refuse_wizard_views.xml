@@ -1,27 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
     <record id="view_helpdesk_refuse_wizard_form" model="ir.ui.view">
         <field name="name">helpdesk.refuse.wizard.form</field>
         <field name="model">helpdesk.refuse.wizard</field>
         <field name="arch" type="xml">
             <form string="Refuse Ticket">
-                <group>
-                    <field name="ticket_id" readonly="1"/>
-                    <field name="refused_reason"
-                           placeholder="Enter a clear reason for refusing this ticket…"
-                           nolabel="1"
-                           rows="4"/>
-                </group>
+                <sheet>
+                    <group>
+                        <div class="alert alert-warning mb-3" role="alert">
+                            <strong>You are about to refuse ticket: </strong>
+                            <field name="ticket_name" readonly="1" nolabel="1" class="fw-bold"/>
+                            <br/>
+                            The ticket submitter will be notified via chatter.
+                            The ticket can be reopened later if needed.
+                        </div>
+                        <field name="ticket_id" invisible="1"/>
+                        <field name="refused_reason"
+                               nolabel="1"
+                               placeholder="Provide a clear reason for refusing this ticket. This will be visible to the submitter..."
+                               required="1"
+                               rows="4"/>
+                    </group>
+                </sheet>
                 <footer>
-                    <button name="action_confirm_refusal"
+                    <button name="action_confirm_refuse"
                             string="Confirm Refusal"
                             type="object"
                             class="btn-danger"/>
-                    <button string="Cancel"
+                    <button string="Discard"
                             class="btn-secondary"
                             special="cancel"/>
                 </footer>
             </form>
         </field>
     </record>
+
 </odoo>

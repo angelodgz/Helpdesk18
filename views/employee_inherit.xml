@@ -1,33 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_employee_helpdesk_inherit" model="ir.ui.view">
+
+    <record id="view_hr_employee_helpdesk_inherit" model="ir.ui.view">
         <field name="name">hr.employee.helpdesk.inherit</field>
         <field name="model">hr.employee</field>
         <field name="inherit_id" ref="hr.view_employee_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//div[@name='button_box']" position="inside">
+
+            <!-- Inject smart buttons into the existing button box -->
+            <div name="button_box" position="inside">
 
                 <!-- Smart Button 1: Tickets submitted by this employee -->
-                <button name="action_view_helpdesk_tickets"
+                <button class="oe_stat_button"
                         type="object"
-                        class="oe_stat_button"
-                        icon="fa-life-ring">
-                    <field name="helpdesk_ticket_count"
-                           widget="statinfo"
-                           string="Tickets Submitted"/>
+                        name="action_open_submitted_tickets"
+                        icon="fa-ticket"
+                        groups="helpdesk_ticket.group_helpdesk_user">
+                    <field name="submitted_ticket_count"
+                           string="Submitted Tickets"
+                           widget="statinfo"/>
                 </button>
 
-                <!-- Bonus Smart Button 2: Tickets assigned to this employee as agent -->
-                <button name="action_view_assigned_helpdesk_tickets"
+                <!-- Smart Button 2 (Bonus): Tickets assigned to this employee -->
+                <button class="oe_stat_button"
                         type="object"
-                        class="oe_stat_button"
-                        icon="fa-tasks">
-                    <field name="helpdesk_assigned_ticket_count"
-                           widget="statinfo"
-                           string="Tickets Assigned"/>
+                        name="action_open_assigned_tickets"
+                        icon="fa-headphones"
+                        groups="helpdesk_ticket.group_helpdesk_agent"
+                        invisible="not user_id">
+                    <field name="assigned_ticket_count"
+                           string="Assigned Tickets"
+                           widget="statinfo"/>
                 </button>
 
-            </xpath>
+            </div>
+
         </field>
     </record>
+
 </odoo>

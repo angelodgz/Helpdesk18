@@ -1,37 +1,29 @@
 {
     'name': 'Helpdesk Ticket',
     'version': '18.0.1.0.0',
-    'summary': 'Ticketing System with Stage-Based Workflow & Approval',
+    'summary': 'Ticketing System with Stage-Based Workflow and Approval',
     'description': """
-        Full-featured Helpdesk Ticketing System for Odoo 18.
-        Features:
-        - Stage-based workflow with Kanban pipeline
-        - Approval process (Manager Approve / Refuse with wizard)
-        - Dynamic fields per ticket category
-        - All 7 views: Form, List, Kanban, Pivot, Graph, Calendar, Activity
-        - Role-based access control (User, Agent, Manager)
-        - Chatter integration and activity tracking
-        - Smart buttons on hr.employee form
-        - Auto-generated TKT-XXXX sequence
+        A fully functional Ticketing System that allows employees to create,
+        manage, and track support/service tickets through defined stages —
+        complete with dynamic fields, file attachments, an approval process,
+        a reporting dashboard with multiple views, and proper access control.
     """,
-    'author': 'Elyon Interns',
     'category': 'Services/Helpdesk',
+    'author': 'Elyon Interns',
     'depends': ['base', 'mail', 'hr'],
     'data': [
-        # 1. Security first
+        # Security — load groups first, then access rules
         'security/groups.xml',
         'security/ir.model.access.csv',
         'security/record_rules.xml',
-        # 2. Data / sequences / stages
+        # Seed data
         'data/sequence.xml',
         'data/stages.xml',
-        # 3. Wizard view (model must exist before its view)
-        'wizard/refuse_wizard_views.xml',
-        # 4. Main views
+        # Views
         'views/stage_views.xml',
         'views/ticket_views.xml',
         'views/employee_inherit.xml',
-        # 5. Menus last (actions must exist first)
+        'wizard/refuse_wizard_views.xml',
         'views/menus.xml',
     ],
     'installable': True,
